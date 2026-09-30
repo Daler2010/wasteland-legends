@@ -120,6 +120,7 @@ const Game = {
   },
 
   update(dt) {
+    if (this.state === 'hub') { Hub.update(dt); return; } // лобби-карта
     if (!this.run) { this.menuT += dt; return; }
     if (this.state !== 'playing') return;
     const R = this.run;
@@ -182,6 +183,8 @@ const Game = {
   },
 
   render() {
+    Hub.sync();
+    if (this.state === 'hub') { Hub.render(this.ctx, this.W, this.H); this.drawJoystick(this.ctx); return; }
     const ctx = this.ctx, W = this.W, H = this.H, R = this.run;
     const loc = R ? R.loc : this.menuLoc;
     let cx, cy;
@@ -277,7 +280,7 @@ const Game = {
 
   drawJoystick(ctx) {
     const j = Input.joy;
-    if (!j.active || this.state !== 'playing') return;
+    if (!j.active || (this.state !== 'playing' && this.state !== 'hub')) return;
     const s = this.scale;
     ctx.globalAlpha = 0.45;
     pxCircle(ctx, j.sx / s, j.sy / s, JOY_RADIUS / s, '#f4f4f4');
@@ -501,7 +504,7 @@ function updateSpawns(R, dt) {
     for (const e of R.enemies) if (e.boss && !e.dead) { const d = dist2(e.x, e.y, R.p.x, R.p.y); if (d < bd) { bd = d; best = e; } }
     if (best) R.boss = best;
   }
-  if (!R.bossSpawned && R.t >= RUN_TIME) spawnBoss(R);
+  if (!R.bossSpawned && R.t >= RUN_TIME) bossList(R).forEach(id => spawnBoss(R, id)); // на некоторых локациях боссов несколько
   // в бесконечном режиме боссы возвращаются, каждый следующий сильнее
   if (R.endless && R.t >= R.nextBoss && (!R.boss || R.boss.dead)) spawnBoss(R, pick(Object.keys(BOSSES)), 1 + R.bossKills * 0.6);
   const calm = R.bossSpawned && !R.endless; // финальный бой: поток врагов слабее
@@ -596,6 +599,8 @@ function openChest(R) {
 function spawnBoss(R, id, mul) {
   R.bossSpawned = true;
   mul = mul || 1;
+  R.lastBossId = id || R.loc.boss;
+  (R.fought || (R.fought = [])).push(R.lastBossId);
   const def = BOSSES[id || R.loc.boss], a = Math.random() * Math.PI * 2, d = spawnDist();
   const e = { boss: true, def, type: 'boss', x: R.p.x + Math.cos(a) * d, y: R.p.y + Math.sin(a) * d,
     hp: def.hp * mul * R.diff.hp, maxHp: def.hp * mul * R.diff.hp, speed: def.speed, r: def.r, dmg: def.dmg * R.diff.dmg, kvx: 0, kvy: 0,
@@ -944,14 +949,11 @@ function bossDefeated(R, e) {
     UI.banner('БОСС ПОВЕРЖЕН!  +50 монет', 2.5);
     return;
   }
-  if (R.rush) {
-    // комната боссов: победа только когда повержены все
-    const left = R.enemies.filter(o => o.boss && !o.dead).length;
-    R.coins += 20;
-    R.shake = 8; R.hitstop = 0.1;
-    burst(R, e.x, e.y, 60, '#ffcd75');
-    if (left > 0) { Sound.sfx('win'); UI.banner('ПОВЕРЖЕН: ' + e.def.name + '. Осталось: ' + left, 2.2); return; }
-  }
+  // если боссов несколько (комната боссов, дуэт в Японии) — победа только когда повержены все
+  const left = R.enemies.filter(o => o.boss && !o.dead).length;
+  if (R.rush) R.coins += 20;
+  if (R.rush || left > 0) { R.shake = 8; R.hitstop = 0.1; burst(R, e.x, e.y, 60, '#ffcd75'); }
+  if (left > 0) { Sound.sfx('win'); UI.banner('ПОВЕРЖЕН: ' + e.def.name + '. Осталось: ' + left, 2.2); return; }
   R.won = true; R.everWon = true;
   if (!R.rush) R.coins += 100 * R.diff.coin;
   R.ending = true; R.endT = 2.8;
@@ -1423,6 +1425,12 @@ function drawAmbient(ctx, loc, cx, cy, W, H) {
       ctx.globalAlpha = spark ? 0.6 + Math.sin(now * 12 + q.ph) * 0.4 : 0.3;
       ctx.fillStyle = spark ? '#f59e42' : '#94b0c2';
       ctx.fillRect(Math.round(q.x), Math.round(q.y), 1, 1);
+    } else if (fx === 'petals') {
+      // лепестки сакуры
+      q.y += (14 + q.s * 16) * dt; q.x += (6 + Math.sin(now * 1.5 + q.ph) * 14) * dt;
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = q.s > 0.5 ? '#f9a8c4' : '#e86a92';
+      ctx.fillRect(Math.round(q.x), Math.round(q.y), 2, 1);
     } else if (q.fog) {
       // полосы тумана
       q.x += (5 + q.s * 6) * dt;
@@ -1642,7 +1650,7 @@ function drawHeldWeapon(ctx, R) {
     pxLine(ctx, hx, hy, ex, ey, '#8b4a2b');
     pxDisc(ctx, ex, ey, 3, '#1a1c2c'); pxDisc(ctx, ex, ey, 2, '#aebfd0');
     ctx.fillStyle = '#f4f4f4'; ctx.fillRect(Math.round(ex) - 1, Math.round(ey) - 1, 1, 1);
-  } else if (id === 'sword') {
+  } else if (id === 'sword' || id === 'katana') {
     let a;
     if (p.atkT > 0) a = p.aim - 1.1 + (1 - p.atkT / 0.2) * 2.2;          // взмах
     else a = p.face < 0 ? Math.PI + 0.9 : -0.9;                          // меч на плече
@@ -1708,7 +1716,15 @@ function drawOverlay(ctx, R, cx, cy, W, H) {
   }
   // стрелы и бутылки
   for (const pr of R.projs) {
-    if (pr.pellet) {
+    if (pr.star) {
+      // сюрикен: вращающийся крестик
+      const x = Math.round(pr.x - cx), y = Math.round(pr.y - cy), d = Math.floor(R.t * 30) % 2;
+      ctx.fillStyle = '#1e1a26';
+      if (d) { ctx.fillRect(x - 3, y - 1, 7, 3); ctx.fillRect(x - 1, y - 3, 3, 7); } else ctx.fillRect(x - 2, y - 2, 5, 5);
+      ctx.fillStyle = '#c7dcd0';
+      if (d) { ctx.fillRect(x - 2, y, 5, 1); ctx.fillRect(x, y - 2, 1, 5); }
+      else { ctx.fillRect(x - 1, y - 1, 1, 1); ctx.fillRect(x + 1, y - 1, 1, 1); ctx.fillRect(x - 1, y + 1, 1, 1); ctx.fillRect(x + 1, y + 1, 1, 1); ctx.fillRect(x, y, 1, 1); }
+    } else if (pr.pellet) {
       // дробь: яркая точка с коротким следом
       const x = Math.round(pr.x - cx), y = Math.round(pr.y - cy);
       ctx.fillStyle = '#f59e42'; ctx.fillRect(Math.round(x - pr.vx * 0.012), Math.round(y - pr.vy * 0.012), 1, 1);

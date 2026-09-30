@@ -6,6 +6,7 @@
   Input.init(Game.canvas);
   UI.init();
   Extra.init();
+  HubUI.init();
 
   let last = performance.now();
   function frame(now) {

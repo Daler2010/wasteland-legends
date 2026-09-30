@@ -12,6 +12,7 @@ function castUlt(R) {
   R.flashT = 0.25; R.shake = Math.max(R.shake, 5);
   UI.banner(ULTS[R.ch.id].name + '!', 1.2);
   Sound.shout(R.ch.id); // боевой клич героя
+  if (ULT_EXTRA[R.ch.id]) { ULT_EXTRA[R.ch.id](R); return; } // ульты завербованных героев (hub.js)
   if (R.ch.id === 'daler') {
     // два залпа по 28 стрел
     for (let wave = 0; wave < 2; wave++) for (let i = 0; i < 28; i++) {

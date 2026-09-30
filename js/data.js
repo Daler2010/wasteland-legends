@@ -265,7 +265,7 @@ const ACHIEVEMENTS = [
   { id: 'allheroes', name: 'Легенды пустоши', desc: 'Победить каждым героем', coins: 100, test: (R, d) => CHARACTERS.every(c => d.wins[c.id]) },
   { id: 'nightmare', name: 'Повелитель кошмаров', desc: 'Победить босса на сложности «Кошмар»', coins: 80, test: R => R.everWon && R.nightmare },
   { id: 'daily',     name: 'Вызов принят',    desc: 'Продержаться 5 минут в испытании дня', coins: 25, test: R => R.daily && R.t >= 300 },
-  { id: 'story',     name: 'Дорога домой',    desc: 'Победить ALANIATOR3000 и открыть Врата', coins: 100, test: (R, d) => LOCATIONS.every(l => d.cleared[l.id]) },
+  { id: 'story',     name: 'Дорога домой',    desc: 'Победить ALANIATOR3000 и открыть Врата', coins: 100, test: (R, d) => LOCATIONS.filter(l => !l.side).every(l => d.cleared[l.id]) },
   { id: 'rush1',     name: 'Дуэлянт',        desc: 'Победить босса в комнате боссов',        coins: 15,  rush: true, test: R => R.everWon },
   { id: 'rush3',     name: 'Трое на одного', desc: 'Победить трёх боссов одновременно',      coins: 40,  rush: true, test: R => R.everWon && R.rush.length >= 3 },
   { id: 'rushall',   name: 'Гроза боссов',   desc: 'Победить всех боссов одновременно',      coins: 100, rush: true, test: R => R.everWon && R.rush.length >= Object.keys(BOSSES).length },

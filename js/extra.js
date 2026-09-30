@@ -118,8 +118,9 @@ const Daily = {
   today() {
     const d = new Date(), key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const rnd = mulberry32(hashInt(d.getFullYear(), d.getMonth() * 40 + d.getDate(), 777));
-    const locs = LOCATIONS.filter(l => !l.final); // финальная арена в испытания не попадает
-    const hero = CHARACTERS[Math.floor(rnd() * CHARACTERS.length)], loc = locs[Math.floor(rnd() * locs.length)];
+    const locs = LOCATIONS.filter(l => !l.final && !l.side); // финальная арена и побочные земли в испытания не попадают
+    const heroes = CHARACTERS.filter(c => !c.recruit);        // только герои, доступные всем с самого начала
+    const hero = heroes[Math.floor(rnd() * heroes.length)], loc = locs[Math.floor(rnd() * locs.length)];
     const pool = this.MODS.slice(), mods = [];
     for (let i = 0; i < 2; i++) mods.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
     return { key, hero, loc, mods };
@@ -237,7 +238,7 @@ const Story = {
   },
   checkEnding(R) {
     const d = Save.data;
-    if (!d.endingSeen && LOCATIONS.every(l => d.cleared[l.id])) { d.endingSeen = true; R.storyEnding = true; }
+    if (!d.endingSeen && LOCATIONS.filter(l => !l.side).every(l => d.cleared[l.id])) { d.endingSeen = true; R.storyEnding = true; }
   },
 };
 
@@ -690,7 +691,7 @@ const Rush = {
     go.onclick = () => {
       UI.click();
       // арена: у финального босса — Врата, иначе родная локация первого выбранного
-      const loc = list.includes('alan') ? 'gates' : LOCATIONS.find(l => l.boss === list[0]).id;
+      const loc = list.includes('alan') ? 'gates' : (LOCATIONS.find(l => l.boss === list[0]) || LOCATIONS.find(l => l.id === 'japan')).id;
       Game.start(this.hero, loc, { rush: list, power: this.power });
     };
     if (UI.current !== 'rush') UI.show('rush');
@@ -771,7 +772,7 @@ const Extra = {
       for (const l of LOCATIONS) {
         if (!l.final) continue;
         const card = document.querySelector(`#loc-cards .card[data-id="${l.id}"]`);
-        const need = LOCATIONS.filter(x => !x.final), have = need.filter(x => d.cleared[x.id]).length;
+        const need = LOCATIONS.filter(x => !x.final && !x.side), have = need.filter(x => d.cleared[x.id]).length;
         const tag = card.querySelector('.card-tag');
         if (have < need.length) {
           card.disabled = true; card.classList.add('locked');
@@ -809,6 +810,7 @@ const Extra = {
       }
       if (!R.rush && R.ch.id === 'maga' && R.everWon && !Story.chap().maga2) { Story.chap().maga2 = true; Save.store(); q.push(Story.chapter('maga2')); }
       if (R.storyEnding) { R.storyEnding = false; q.push(Story.ENDING_SCENE); }
+      if (R.extraScenes) { q.push(...R.extraScenes); R.extraScenes = null; } // вербовка новых героев
       const next = () => { const s = q.shift(); if (s) Story.scene(s, next, R.ch.id); else UI.show('end'); };
       if (q.length) next();
     };
@@ -817,7 +819,7 @@ const Extra = {
     const showMenu = UI.showMenu.bind(UI);
     UI.showMenu = () => {
       showMenu();
-      const sh = LOCATIONS.filter(l => !l.final), n = sh.filter(l => Save.data.cleared[l.id]).length;
+      const sh = LOCATIONS.filter(l => !l.final && !l.side), n = sh.filter(l => Save.data.cleared[l.id]).length;
       $('shards').textContent = 'Осколки Врат: ' + '◆'.repeat(n) + '◇'.repeat(sh.length - n) + (Save.data.cleared.gates ? '  ★' : '');
     };
     UI.showMenu();
