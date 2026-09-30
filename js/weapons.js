@@ -262,7 +262,7 @@ Object.assign(WEAPON_LOGIC, {
       for (let i = 0; i < s.count; i++) {
         // «Лабрис бури» летит веером во все стороны, обычные секиры — узким веером в цель
         const a = w.evo ? base + i * Math.PI * 2 / s.count : base + (i - (s.count - 1) / 2) * 0.4;
-        R.projs.push({ type: 'axe', x: p.x, y: p.y - 2, vx: Math.cos(a) * 175, vy: Math.sin(a) * 175, dist: 0, range: s.range * p.area, dmg: s.dmg, t: 0, life: 1, big: w.evo, hit: new Set() });
+        R.projs.push({ type: 'axe', x: p.x, y: p.y - 2, vx: Math.cos(a) * 175, vy: Math.sin(a) * 175, dist: 0, range: s.range * p.area, dmg: s.dmg, pierce: s.pierce || 99, t: 0, life: 1, big: w.evo, hit: new Set() });
       }
       Sound.sfx('sword');
     },
@@ -378,6 +378,7 @@ function updateExtraProj(R, pr, dt) {
       const rr = e.r + hr;
       if (dist2(pr.x, pr.y, e.x, e.y) < rr * rr) { pr.hit.add(e); hurtEnemy(R, e, pr.dmg, pr.vx, pr.vy, 110); }
     }
+    if (pr.hit.size >= pr.pierce) pr.dist = pr.range; // секира застревает после нескольких врагов
     if (pr.dist >= pr.range) { pr.life = 0; burst(R, pr.x, pr.y, 4, '#c7dcd0'); }
   } else if (pr.type === 'boom') {
     // летит по дуге от героя и обратно; каждого врага задевает по разу в каждую сторону

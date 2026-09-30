@@ -51,7 +51,7 @@ const Game = {
     addWeapon(R.ch.weapon);
     if (R.tal.wlvl) R.p.weapons[0].lvl = 2; // талант: стартовое оружие сразу 2 уровня
     // обучение показывается один раз — только в самом первом забеге
-    R.tutOn = !Save.data.tutDone && !R.daily && !R.rush;
+    R.tutOn = !Save.data.tutDone && !R.daily && !R.rush && !R.training;
     if (R.tutOn) { Save.data.tutDone = true; Save.store(); }
     if (R.rush) rushBuild(R, this.lastOpts.power || 2); // комната боссов: герой сразу прокачан
     recalcStats();
@@ -322,6 +322,7 @@ function createRun(charId, locId, opts) {
   return {
     ch, loc, p, t: 0, cx: 0, cy: 0,
     rush: opts.rush || null, // комната боссов: список выбранных боссов
+    training: !!opts.training, // тренировочная площадка: манекены вместо врагов
     tal: T, mods, diff, nightmare: !!opts.nightmare, daily: opts.daily || null, talentPts: 0, talentGiven: false, weatherW: 0,
     dmgBy: {}, dmgTaken: 0, src: null,
     chests: 0, pacts: 0, eliteKills: 0, everWon: false, newAch: [], newCostume: false,
@@ -508,7 +509,7 @@ function updateSpawns(R, dt) {
   // в бесконечном режиме боссы возвращаются, каждый следующий сильнее
   if (R.endless && R.t >= R.nextBoss && (!R.boss || R.boss.dead)) spawnBoss(R, pick(Object.keys(BOSSES)), 1 + R.bossKills * 0.6);
   const calm = R.bossSpawned && !R.endless; // финальный бой: поток врагов слабее
-  const rate = (calm ? 1.2 : 0.7 + R.t / 50) * R.diff.rate;
+  const rate = (calm ? 1.2 : 0.7 + R.t / 58) * R.diff.rate;
   const cap = calm ? 60 : Math.min(280, (25 + R.t * 0.42) * R.diff.rate);
   R.spawnAcc += rate * dt;
   while (R.spawnAcc >= 1) {
@@ -755,7 +756,7 @@ function updateEnemies(R, dt) {
       }
     }
     if (Math.abs(p.x - e.x) > 0.5) e.face = p.x < e.x ? -1 : 1;
-    if (d < e.r + p.r) { e.atkT = 0.25; hurtPlayer(R, e.dmg * (e.lst === 2 ? 1.25 : 1)); }
+    if (d < e.r + p.r && e.dmg > 0) { e.atkT = 0.25; hurtPlayer(R, e.dmg * (e.lst === 2 ? 1.25 : 1)); }
   }
   separate(R);
 }

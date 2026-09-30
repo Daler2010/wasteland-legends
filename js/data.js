@@ -5,7 +5,7 @@ const CHARACTERS = [
     desc: 'Быстрый и меткий. Стреляет из лука в ближайшего врага. Ульта: град стрел.' },
   { id: 'stimme', name: 'STIMME', title: 'Принцесса', sprite: 'stimme', hp: 100, speed: 66, armor: 0, regen: 0.4, weapon: 'wave',
     desc: 'Её голос — оружие. Звуковая волна бьёт и отталкивает всех вокруг. Сама лечится со временем. Ульта: оглушающий крик.' },
-  { id: 'babaduk', name: 'BABADUK', title: 'Рыцарь-принц', sprite: 'babaduk', hp: 150, speed: 56, armor: 2, regen: 0, weapon: 'sword',
+  { id: 'babaduk', name: 'BABADUK', title: 'Рыцарь-принц', sprite: 'babaduk', hp: 165, speed: 60, armor: 3, regen: 0, weapon: 'sword',
     desc: 'Тяжёлая броня и много здоровья. Рубит мечом всех, кто подойдёт близко. Ульта: таран.' },
   { id: 'maga', name: 'Maga', title: 'Минотавр-гладиатор', sprite: 'maga', hp: 160, speed: 56, armor: 1, regen: 0, weapon: 'axe',
     desc: 'Гора мышц с золотой гривой. Мечет тяжёлые секиры, пробивающие всех на пути. Ульта: землетрясение.' },
@@ -30,9 +30,9 @@ const WEAPONS = {
     descs: ['Волна вокруг героя, отталкивает врагов', '+урон', '+радиус', '+урон, чаще', 'Двойная волна, +радиус'] },
   sword: { name: 'Меч', icon: 'i_sword',
     levels: [
-      { dmg: 22, cd: 0.9, r: 32, dirs: 1 },
-      { dmg: 28, cd: 0.9, r: 33, dirs: 1 },
-      { dmg: 28, cd: 0.9, r: 33, dirs: 2 },
+      { dmg: 26, cd: 0.8, r: 34, dirs: 1 },
+      { dmg: 31, cd: 0.8, r: 35, dirs: 1 },
+      { dmg: 31, cd: 0.8, r: 35, dirs: 2 },
       { dmg: 32, cd: 0.9, r: 36, dirs: 2 },
       { dmg: 40, cd: 0.85, r: 38, dirs: 4 }],
     descs: ['Рубит ближайших врагов', '+урон', 'Удар вперёд и назад', '+урон, +дальность, чаще', 'Удар во все 4 стороны!'] },
@@ -80,13 +80,13 @@ WEAPONS.tesla.evo = { name: 'Гроза', need: 'clock', desc: '4 молнии �
 Object.assign(WEAPONS, {
   axe: { name: 'Секира', icon: 'i_axe',
     levels: [
-      { dmg: 16, cd: 1.8, count: 1, range: 78 },
-      { dmg: 20, cd: 1.8, count: 1, range: 78 },
-      { dmg: 20, cd: 1.7, count: 2, range: 82 },
-      { dmg: 25, cd: 1.7, count: 2, range: 96 },
-      { dmg: 29, cd: 1.55, count: 3, range: 100 }],
-    descs: ['Метает тяжёлую секиру — пробивает всех на пути', '+урон', '+1 секира', '+урон, летит дальше', '+1 секира, чаще'],
-    evo: { name: 'Лабрис бури', need: 'might', desc: 'Пять гигантских секир во все стороны', stats: { dmg: 46, cd: 1.25, count: 5, range: 120 } } },
+      { dmg: 16, cd: 1.8, count: 1, range: 78, pierce: 5 },
+      { dmg: 20, cd: 1.8, count: 1, range: 78, pierce: 6 },
+      { dmg: 20, cd: 1.7, count: 2, range: 82, pierce: 6 },
+      { dmg: 25, cd: 1.7, count: 2, range: 96, pierce: 7 },
+      { dmg: 29, cd: 1.55, count: 3, range: 100, pierce: 8 }],
+    descs: ['Метает тяжёлую секиру — пробивает до 5 врагов', '+урон', '+1 секира', '+урон, летит дальше', '+1 секира, чаще'],
+    evo: { name: 'Лабрис бури', need: 'might', desc: 'Пять гигантских секир во все стороны', stats: { dmg: 46, cd: 1.25, count: 5, range: 120, pierce: 14 } } },
   boomerang: { name: 'Бумеранг', icon: 'i_boomerang',
     levels: [
       { dmg: 14, cd: 1.6, count: 1, range: 70 },
@@ -223,17 +223,17 @@ LOCATIONS.push({ id: 'gates', name: 'Врата миров', seed: 71, music: 'm
 for (const l of LOCATIONS) l.weather = { desert: 'sandstorm', forest: 'rain', factory: 'rain' }[l.id] || null;
 
 const BOSSES = {
-  scorpion: { name: 'Радскорпион', sprite: 'scorpion', hp: 2400, speed: 34, dmg: 18, r: 18, scale: 3, color: '#a7f070',
+  scorpion: { name: 'Радскорпион', sprite: 'scorpion', hp: 4000, speed: 34, dmg: 18, r: 18, scale: 3, color: '#a7f070',
     attacks: [{ type: 'spread', cd: 2.2, n: 5 }, { type: 'dash', cd: 5.5 }] },
-  robot: { name: 'Боевой робот «Молот»', sprite: 'robot', hp: 2800, speed: 24, dmg: 20, r: 18, scale: 3, color: '#ef7d57',
+  robot: { name: 'Боевой робот «Молот»', sprite: 'robot', hp: 4600, speed: 24, dmg: 20, r: 18, scale: 3, color: '#ef7d57',
     attacks: [{ type: 'ring', cd: 3, n: 16 }, { type: 'spread', cd: 1.8, n: 3 }] },
-  giant: { name: 'Зомби-великан', sprite: 'giant', hp: 3200, speed: 26, dmg: 24, r: 20, scale: 3, color: '#7a6a9a',
+  giant: { name: 'Зомби-великан', sprite: 'giant', hp: 5200, speed: 26, dmg: 24, r: 20, scale: 3, color: '#7a6a9a',
     attacks: [{ type: 'summon', cd: 6, n: 6 }, { type: 'ring', cd: 4, n: 12 }, { type: 'dash', cd: 7 }] },
   // Финальный босс: толстый школьник-переросток с усиками и галстуком
-  alan: { name: 'ALANIATOR3000', sprite: 'alan', hp: 5200, speed: 27, dmg: 24, r: 22, scale: 3, color: '#ef3b5b',
+  alan: { name: 'ALANIATOR3000', sprite: 'alan', hp: 8500, speed: 27, dmg: 24, r: 22, scale: 3, color: '#ef3b5b',
     attacks: [{ type: 'rain', cd: 4.5, n: 7 }, { type: 'spread', cd: 2.2, n: 7 }, { type: 'dash', cd: 6 },
       { type: 'ring', cd: 3.6, n: 18 }, { type: 'summon', cd: 8, n: 5, spawn: 'rat' }] },
-  queen: { name: 'Матка слизней', sprite: 'queen', hp: 3000, speed: 28, dmg: 20, r: 19, scale: 3, color: '#c77dff',
+  queen: { name: 'Матка слизней', sprite: 'queen', hp: 5000, speed: 28, dmg: 20, r: 19, scale: 3, color: '#c77dff',
     attacks: [{ type: 'summon', cd: 5, n: 7, spawn: 'minislime' }, { type: 'ring', cd: 3.2, n: 14 }, { type: 'spread', cd: 2.6, n: 5 }] },
 };
 

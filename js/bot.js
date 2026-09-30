@@ -64,6 +64,7 @@
     function chunk() {
       for (let i = 0; i < 900 && Game.state !== 'over'; i++) {
         if (Game.state === 'levelup') chooseUpgrade();
+        if (Game.state === 'paused') Game.resume(); // автопауза при скрытой вкладке не должна останавливать замер
         if (Game.state === 'dialog') Story.skip();
         if (Game.state === 'shop') Merchant.close();
         steer(R);
