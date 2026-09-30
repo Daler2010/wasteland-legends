@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1c2c">
+  <title>Wasteland Legends</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD во время забега -->
+  <div id="hud" class="hidden">
+    <div id="xpbar"><div id="xpfill"></div></div>
+    <div id="hud-top">
+      <div id="hud-left">
+        <div id="hpbar"><div id="hpfill"></div><span id="hptext"></span></div>
+        <div id="lvl" class="hudtext">УР 1</div>
+        <div id="slots"></div>
+      </div>
+      <div id="timer">00:00</div>
+      <div id="hud-right">
+        <div class="hudtext"><img class="ic" data-icon="i_skull" alt=""> <span id="kills">0</span></div>
+        <div class="hudtext"><img class="ic" data-icon="coin" alt=""> <span id="coins">0</span></div>
+        <button id="btn-pause" aria-label="Пауза">II</button>
+      </div>
+    </div>
+    <div id="combo" style="display:none"></div>
+    <div id="tip" class="hidden"></div>
+    <button id="btn-dash" aria-label="Рывок">РЫВОК</button>
+    <button id="btn-ult" aria-label="Ульта">0%</button>
+    <div id="bossbar" style="display:none">
+      <div id="bossname"></div>
+      <div id="bossbg"><div id="bossfill"></div></div>
+    </div>
+  </div>
+  <div id="banner" class="hidden"></div>
+
+  <!-- Главное меню -->
+  <section id="scr-menu" class="screen">
+    <div class="inner center">
+      <h1 class="title">WASTELAND<br>LEGENDS</h1>
+      <p class="subtitle">Легенды пустоши</p>
+      <div id="menu-heroes"></div>
+      <div class="menu-buttons">
+        <button class="btn" id="btn-play">ИГРАТЬ</button>
+        <div class="btn-row">
+          <button class="btn half" id="btn-daily">ИСПЫТАНИЕ ДНЯ</button>
+          <button class="btn half" id="btn-rush">КОМНАТА БОССОВ</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn half" id="btn-shop">МАГАЗИН</button>
+          <button class="btn half" id="btn-talent">ТАЛАНТЫ</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn half" id="btn-ach">ДОСТИЖЕНИЯ</button>
+          <button class="btn half btn-settings">НАСТРОЙКИ</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn half" id="btn-story">СЮЖЕТ</button>
+          <button class="btn half" id="btn-help">УПРАВЛЕНИЕ</button>
+        </div>
+      </div>
+      <div id="shards" class="muted"></div>
+      <div class="coins-line"><img class="ic" data-icon="coin" alt=""> <span class="coin-count">0</span></div>
+      <div class="toggles">
+        <button class="btn small tgl-music"></button>
+        <button class="btn small tgl-sfx"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Выбор героя -->
+  <section id="scr-char" class="screen">
+    <div class="inner center">
+      <h2>Выбери героя</h2>
+      <div class="cards" id="char-cards"></div>
+      <button class="btn" data-back="menu">Назад</button>
+    </div>
+  </section>
+
+  <!-- Выбор локации -->
+  <section id="scr-loc" class="screen">
+    <div class="inner center">
+      <h2>Выбери локацию</h2>
+      <button class="btn small hidden" id="btn-diff"></button>
+      <div class="cards" id="loc-cards"></div>
+      <button class="btn" data-back="char">Назад</button>
+    </div>
+  </section>
+
+  <!-- Магазин -->
+  <section id="scr-shop" class="screen">
+    <div class="inner panel">
+      <h2>Магазин улучшений</h2>
+      <p class="muted">Улучшения навсегда и для всех героев.</p>
+      <div class="coins-line"><img class="ic" data-icon="coin" alt=""> <span class="coin-count">0</span></div>
+      <div id="shop-list"></div>
+      <div class="center"><button class="btn" data-back="menu">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Достижения и рекорды -->
+  <section id="scr-ach" class="screen">
+    <div class="inner panel">
+      <h2>Рекорды</h2>
+      <div id="rec-stats" class="stats wide"></div>
+      <h2>Достижения <span id="ach-count" class="gold"></span></h2>
+      <div id="ach-list"></div>
+      <div class="center"><button class="btn" data-back="menu">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Таланты героев -->
+  <section id="scr-talent" class="screen">
+    <div class="inner panel">
+      <h2>Таланты</h2>
+      <div class="tabs" id="tal-tabs"></div>
+      <div class="tal-head"><img id="tal-portrait" alt=""><div><div class="card-name" id="tal-name"></div><div class="muted" id="tal-pts"></div><div class="muted">Очки даются за забеги этим героем: 1 за минуту, +5 за победу.</div></div></div>
+      <div id="tal-list"></div>
+      <div class="center"><button class="btn small" id="tal-reset">Сбросить таланты</button><button class="btn" data-back="menu">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Испытание дня -->
+  <section id="scr-daily" class="screen">
+    <div class="inner panel">
+      <h2>Испытание дня</h2>
+      <p class="muted" id="daily-date"></p>
+      <div id="daily-info" class="stats wide"></div>
+      <div id="daily-mods"></div>
+      <div id="daily-best" class="stats wide"></div>
+      <div class="center">
+        <button class="btn" id="daily-start">НАЧАТЬ</button>
+        <button class="btn small" id="daily-share">Скопировать результат</button>
+        <button class="btn" data-back="menu">Назад</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Комната боссов -->
+  <section id="scr-rush" class="screen">
+    <div class="inner panel">
+      <h2>Комната боссов</h2>
+      <p class="muted">Выбери героя и любых боссов — хоть всех сразу. Герой выходит уже прокачанным. Сюжет и рекорды этот режим не трогает.</p>
+      <div class="rush-title">Герой</div>
+      <div class="rush-grid" id="rush-heroes"></div>
+      <div class="rush-title">Боссы <button class="btn small" id="rush-all">Выбрать всех</button></div>
+      <div class="rush-grid" id="rush-bosses"></div>
+      <div class="rush-title">Сила героя</div>
+      <div class="seg" id="rush-power"><button data-v="1">Слабая</button><button data-v="2">Средняя</button><button data-v="3">Максимум</button></div>
+      <div class="center">
+        <button class="btn" id="rush-start">В БОЙ!</button>
+        <button class="btn" data-back="menu">Назад</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Настройки -->
+  <section id="scr-settings" class="screen modal">
+    <div class="inner panel">
+      <h2>Настройки</h2>
+      <div class="set-grid">
+        <span>Музыка</span><input type="range" id="set-music" min="0" max="100" step="5">
+        <span>Звуки</span><input type="range" id="set-sfx" min="0" max="100" step="5">
+        <span>Тряска экрана</span><div class="seg" id="set-shake"><button data-v="0">Выкл</button><button data-v="0.5">Слабая</button><button data-v="1">Обычная</button></div>
+        <span>Кнопки на экране</span><div class="seg" id="set-btn"><button data-v="1">Обычные</button><button data-v="1.3">Крупные</button><button data-v="1.6">Огромные</button></div>
+      </div>
+      <p class="muted">Геймпад: стик — движение, A — рывок, B/X — ульта, Start — пауза. В меню: крестовина и A.</p>
+      <div class="center"><button class="btn" id="set-back">Готово</button></div>
+    </div>
+  </section>
+
+  <!-- Торговец -->
+  <section id="scr-merchant" class="screen modal">
+    <div class="inner panel">
+      <h2 class="gold">Торговец</h2>
+      <p class="muted">«Монеты вперёд, странник. В пустоши в долг не дают.»</p>
+      <div class="coins-line"><img class="ic" data-icon="coin" alt=""> <span id="mer-coins">0</span></div>
+      <div id="mer-list"></div>
+      <div class="center"><button class="btn" id="mer-leave">Уйти</button></div>
+    </div>
+  </section>
+
+  <!-- Диалог перед боссом -->
+  <section id="scr-dialog" class="screen dialog">
+    <!-- комикс: крупный план справа и слева, реплика в «пузыре» -->
+    <div class="cm-panel cm-left" id="cm-left"><div class="cm-bg"></div><img id="cm-img-left" alt=""></div>
+    <div class="cm-panel cm-right" id="cm-right"><div class="cm-bg"></div><img id="cm-img-right" alt=""></div>
+    <div class="cm-bubble" id="cm-bubble">
+      <div class="cm-name" id="dlg-name"></div>
+      <p id="dlg-text"></p>
+      <div class="cm-next">▶ дальше</div>
+    </div>
+    <button class="btn small" id="cm-skip">Пропустить</button>
+  </section>
+
+  <!-- Сюжетный текст -->
+  <section id="scr-story" class="screen modal">
+    <div class="inner panel">
+      <h2 class="gold" id="story-title"></h2>
+      <div id="story-text"></div>
+      <div class="center"><button class="btn" id="story-next">Дальше</button></div>
+    </div>
+  </section>
+
+  <!-- Управление -->
+  <section id="scr-help" class="screen">
+    <div class="inner panel">
+      <h2>Управление</h2>
+      <div class="help-grid">
+        <span>WASD / стрелки</span><b>движение</b>
+        <span>Пробел / Shift</span><b>рывок (неуязвимость на мгновение)</b>
+        <span>E / Q</span><b>ульта героя (заряжается убийствами)</b>
+        <span>Esc / P</span><b>пауза</b>
+        <span>1 / 2 / 3</span><b>выбор улучшения</b>
+        <span>M</span><b>музыка вкл/выкл</b>
+        <span>Телефон</span><b>коснись экрана и тяни — это джойстик</b>
+      </div>
+      <p class="muted">Убивай врагов подряд — растёт комбо и бонус к опыту. Золотые элитные враги оставляют много добычи.</p>
+      <p class="muted">Эволюция: прокачай оружие до 5 уровня и возьми его парный предмет (лук + зелье силы, волна + магнит, меч + броня, коктейль + аптечка, пилы + сапоги, тесла + часы).</p>
+      <p class="muted">Машины, ящики, станки и деревья твёрдые: за ними можно укрыться от пуль, а враги вынуждены их обходить.</p>
+      <p class="muted">На карте появляются сундуки и тёмные алтари (мигающая точка у края экрана показывает, куда идти), случаются бури и золотая лихорадка. После победы над боссом можно остаться в бесконечном режиме.</p>
+      <p class="muted">Торговец продаёт лечение и улучшения за монеты забега. За забеги герой получает очки талантов (меню «Таланты»). После первой победы открывается сложность «Кошмар».</p>
+      <p class="muted">Оружие стреляет само. Собирай кристаллы опыта, выбирай улучшения и продержись 10 минут — тогда придёт босс локации. Монеты тратятся в магазине.</p>
+      <div class="center"><button class="btn" data-back="menu">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Новый уровень -->
+  <section id="scr-levelup" class="screen modal">
+    <div class="inner center">
+      <h2 class="gold" id="lvl-title">НОВЫЙ УРОВЕНЬ!</h2>
+      <div class="cards" id="lvl-cards"></div>
+    </div>
+  </section>
+
+  <!-- Пауза -->
+  <section id="scr-pause" class="screen modal">
+    <div class="inner panel center">
+      <h2>ПАУЗА</h2>
+      <div id="pause-build"></div>
+      <div class="menu-buttons">
+        <button class="btn" id="btn-resume">ПРОДОЛЖИТЬ</button>
+        <button class="btn small tgl-music"></button>
+        <button class="btn small tgl-sfx"></button>
+        <button class="btn small btn-settings">Настройки</button>
+        <button class="btn" id="btn-quit">В МЕНЮ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Конец забега -->
+  <section id="scr-end" class="screen modal">
+    <div class="inner panel center">
+      <h2 id="end-title"></h2>
+      <div id="end-stats" class="stats wide"></div>
+      <div id="end-ach"></div>
+      <div class="menu-buttons">
+        <button class="btn" id="btn-endless">БЕСКОНЕЧНЫЙ РЕЖИМ</button>
+        <button class="btn" id="btn-again">ЕЩЁ РАЗ</button>
+        <button class="btn" id="btn-menu">В МЕНЮ</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/util.js?v=1"></script>
+  <script src="js/data.js?v=1"></script>
+  <script src="js/sprites.js?v=1"></script>
+  <script src="js/heroart.js?v=1"></script>
+  <script src="js/enemyart.js?v=1"></script>
+  <script src="js/art.js?v=1"></script>
+  <script src="js/audio.js?v=1"></script>
+  <script src="js/input.js?v=1"></script>
+  <script src="js/weapons.js?v=1"></script>
+  <script src="js/game.js?v=1"></script>
+  <script src="js/ui.js?v=1"></script>
+  <script src="js/extra.js?v=1"></script>
+  <script src="js/main.js?v=1"></script>
+  <script src="js/bot.js?v=1"></script>
+</body>
+</html>
