@@ -178,9 +178,11 @@ const MP = {
     switch (m.k) {
       case 'hi': {
         if (this.rosterOf(slot)) return;
+        // версии игры должны совпадать (у старых гостей версии в сообщении нет)
+        if (m.ver && m.ver !== GAME_VER) { Net.send(slot, { k: 'old', ver: GAME_VER }); setTimeout(() => Net.kick(slot), 500); return; }
         const r = { slot, name: String(m.name || 'Гость').slice(0, 14), hero: m.prof.hero, prof: m.prof };
         this.roster.push(r);
-        Net.send(slot, { k: 'hi', slot, code: this.code });
+        Net.send(slot, { k: 'hi', slot, code: this.code, ver: GAME_VER });
         if (this.scene === 'lobby') this.addToRun(r);
         this.sendStart(slot);
         this.sendRoster();
@@ -761,13 +763,17 @@ const MP = {
     try { await Net.join(code); } catch (e) { this.status(e.message, true); return; }
     this.on = true; this.role = 'client'; this.code = code; this.me = -1;
     this.status('Подключено! Жду ответа хозяина...');
-    Net.toHost({ k: 'hi', name: this.nick(), prof: this.profile(this.myHero()) });
+    Net.toHost({ k: 'hi', name: this.nick(), prof: this.profile(this.myHero()), ver: GAME_VER });
   },
 
   clientMsg(m) {
     switch (m.k) {
       case 'full': this.lost('Лобби заполнено (максимум ' + MP_MAX + ' игрока)'); break;
-      case 'hi': this.me = m.slot; break;
+      case 'hi':
+        this.me = m.slot;
+        if (m.ver !== GAME_VER) UI.banner('У хозяина лобби старая версия игры — пусть обновит страницу (Ctrl+F5)', 6);
+        break;
+      case 'old': this.lost(m.ver > GAME_VER ? 'У тебя старая версия игры. Обнови страницу (Ctrl+F5 или закрой и открой сайт заново)' : 'У хозяина лобби старая версия игры. Пусть он обновит страницу (Ctrl+F5)'); break;
       case 'ros': this.roster = m.list; this.applyRoster(); this.rosterUI(); break;
       case 'start': this.clientStart(m); break;
       case 's': if (this.R) this.applySnap(m); if (performance.now() - (this.pingT || 0) > 2000) { this.pingT = performance.now(); Net.toHost({ k: 'pg', t: Math.round(this.pingT), r: this.rtt || 0 }); } break;
@@ -1182,7 +1188,7 @@ const MP = {
     const host = this.isHost(), M = MP_MODES[z];
     const hostName = (this.rosterOf(0) || {}).name || 'хозяин';
     $('mp-pname').textContent = z === 'hero' ? 'Костёр отряда' : M.name;
-    $('mp-pdesc').textContent = z === 'hero' ? 'Сменить героя. Доступны те, кого ты уже спас в своём сюжете.' : M.desc + (host ? '' : ` Режим запускает хозяин лобби: ${hostName}.`);
+    $('mp-pdesc').textContent = z === 'hero' ? 'Сменить героя. В онлайне доступны все герои.' : M.desc + (host ? '' : ` Режим запускает хозяин лобби: ${hostName}.`);
     const go = $('mp-go');
     go.disabled = z !== 'hero' && !host;
     go.textContent = (z === 'hero' ? 'СМЕНИТЬ ГЕРОЯ' : host ? 'НАСТРОИТЬ И НАЧАТЬ' : 'ЖДЁМ ХОЗЯИНА') + (matchMedia('(hover: hover)').matches && !go.disabled ? '  [E]' : '');

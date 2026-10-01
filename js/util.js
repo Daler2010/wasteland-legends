@@ -1,4 +1,6 @@
 // ===== Вспомогательные функции =====
+// версия игры — число из ?v= у подключённых скриптов (сверяется с сайтом и между игроками онлайн)
+const GAME_VER = +(((document.currentScript && document.currentScript.src) || '').match(/[?&]v=(\d+)/) || [0, 0])[1];
 function rand(a, b) { return a + Math.random() * (b - a); }
 function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
