@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -59,6 +59,23 @@
     </div>
   </div>
 
+  <!-- Онлайн: лобби, подписи, подсказки -->
+  <div id="mp-ui" class="hidden">
+    <div id="mp-labels"></div>
+    <div id="mp-lobby" class="mp-box">
+      <div class="mp-codeline">ЛОББИ <b id="mp-code" class="gold"></b> <button class="btn small" id="mp-copy">Копировать</button></div>
+      <div id="mp-players"></div>
+    </div>
+    <button class="btn small" id="mp-exit">Меню</button>
+    <div id="mp-score" class="mp-box hidden"></div>
+    <div id="mp-dead" class="hidden"></div>
+    <div id="mp-prompt" class="mp-panel hidden">
+      <div class="card-name" id="mp-pname"></div>
+      <p class="muted" id="mp-pdesc"></p>
+      <div class="hub-btns"><button class="btn" id="mp-go">ВОЙТИ</button></div>
+    </div>
+  </div>
+
   <!-- Главное меню -->
   <section id="scr-menu" class="screen">
     <div class="inner center">
@@ -67,6 +84,7 @@
       <div id="menu-heroes"></div>
       <div class="menu-buttons">
         <button class="btn" id="btn-play">ИГРАТЬ</button>
+        <button class="btn" id="btn-online">ОНЛАЙН С ДРУЗЬЯМИ</button>
         <div class="btn-row">
           <button class="btn half" id="btn-daily">ИСПЫТАНИЕ ДНЯ</button>
           <button class="btn half" id="btn-rush">КОМНАТА БОССОВ</button>
@@ -190,7 +208,91 @@
         <span>Кнопки на экране</span><div class="seg" id="set-btn"><button data-v="1">Обычные</button><button data-v="1.3">Крупные</button><button data-v="1.6">Огромные</button></div>
       </div>
       <p class="muted">Геймпад: стик — движение, A — рывок, B/X — ульта, Start — пауза. В лагере: A — войти, Y — карта. В меню: крестовина и A.</p>
-      <div class="center"><button class="btn small" id="set-newstory">Начать сюжет заново</button><button class="btn" id="set-back">Готово</button></div>
+      <p class="muted">Прогресс хранится в этом браузере. Код сохранения переносит его на другое устройство.</p>
+      <div class="center"><button class="btn small" id="btn-savecode">Код сохранения</button><button class="btn small" id="set-newstory">Начать сюжет заново</button><button class="btn" id="set-back">Готово</button></div>
+    </div>
+  </section>
+
+  <!-- Онлайн: вход -->
+  <section id="scr-online" class="screen">
+    <div class="inner panel">
+      <h2 class="gold">Онлайн с друзьями</h2>
+      <p class="muted">Один создаёт лобби и говорит друзьям код из 5 знаков, остальные вводят его. До 4 игроков. Нужен интернет; играть можно с телефона и компьютера вместе.</p>
+      <div class="set-grid">
+        <span>Твоё имя</span><input id="on-name" class="txt" maxlength="14" placeholder="Например, Daler">
+      </div>
+      <p class="muted" id="on-hero"></p>
+      <div class="center"><button class="btn" id="on-host">СОЗДАТЬ ЛОББИ</button></div>
+      <div class="set-grid">
+        <span>Код комнаты</span><input id="on-code" class="txt code" maxlength="5" placeholder="ABCDE" autocomplete="off">
+      </div>
+      <div class="center"><button class="btn" id="on-join">ВОЙТИ ПО КОДУ</button></div>
+      <p class="muted" id="on-status"></p>
+      <p class="muted">Прокачка, таланты и спасённые герои — твои, из сюжета. Монеты, собранные отрядом, достаются каждому.</p>
+      <div class="center"><button class="btn" id="on-back">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Онлайн: смена героя у костра -->
+  <section id="scr-mphero" class="screen modal">
+    <div class="inner panel">
+      <h2>Выбери героя</h2>
+      <div class="rush-grid" id="mph-list"></div>
+      <div class="center"><button class="btn" id="mph-back">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Онлайн: настройка режима (хозяин) -->
+  <section id="scr-mpmode" class="screen modal">
+    <div class="inner panel">
+      <h2 class="gold" id="mpm-title"></h2>
+      <p class="muted" id="mpm-desc"></p>
+      <div id="mpm-opts"></div>
+      <div class="center"><button class="btn" id="mpm-go">НАЧАТЬ ДЛЯ ВСЕХ!</button><button class="btn small" id="mpm-back">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Онлайн: меню (игра не останавливается) -->
+  <section id="scr-mpmenu" class="screen modal">
+    <div class="inner panel center">
+      <h2>МЕНЮ</h2>
+      <p class="muted" id="mpmenu-info"></p>
+      <div class="menu-buttons">
+        <button class="btn" id="mpmenu-back">ПРОДОЛЖИТЬ</button>
+        <button class="btn" id="mpmenu-lobby">ВСЕХ В ЛАГЕРЬ</button>
+        <button class="btn small tgl-music"></button>
+        <button class="btn small tgl-sfx"></button>
+        <button class="btn" id="mpmenu-leave">ВЫЙТИ ИЗ ЛОББИ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Онлайн: итоги -->
+  <section id="scr-mpend" class="screen modal">
+    <div class="inner panel center">
+      <h2 id="mpe-title"></h2>
+      <div id="mpe-table"></div>
+      <p class="muted" id="mpe-info"></p>
+      <div class="menu-buttons">
+        <button class="btn" id="mpe-lobby">ВСЕХ В ЛАГЕРЬ</button>
+        <p class="muted" id="mpe-wait">Ждём, когда хозяин лобби вернёт всех в лагерь...</p>
+        <button class="btn" id="mpe-leave">ВЫЙТИ ИЗ ЛОББИ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Код сохранения -->
+  <section id="scr-savecode" class="screen modal">
+    <div class="inner panel">
+      <h2 class="gold">Код сохранения</h2>
+      <p class="muted" id="sc-info"></p>
+      <p class="muted">1. Скопируй этот код и отправь себе (например, в мессенджер).</p>
+      <textarea id="sc-code" class="code-box" readonly rows="4"></textarea>
+      <div class="center"><button class="btn small" id="sc-copy">Скопировать</button></div>
+      <p class="muted">2. На другом устройстве открой Настройки → Код сохранения и вставь код сюда:</p>
+      <textarea id="sc-in" class="code-box" rows="3" placeholder="WL1-..."></textarea>
+      <p class="muted gold" id="sc-msg"></p>
+      <div class="center"><button class="btn small" id="sc-load" disabled>Загрузить</button><button class="btn" id="sc-back">Назад</button></div>
     </div>
   </section>
 
@@ -257,6 +359,8 @@
       <p class="muted">Машины, ящики, станки и деревья твёрдые: за ними можно укрыться от пуль, а враги вынуждены их обходить.</p>
       <p class="muted">На карте появляются сундуки и тёмные алтари (мигающая точка у края экрана показывает, куда идти), случаются бури и золотая лихорадка. После победы над боссом можно остаться в бесконечном режиме.</p>
       <p class="muted">Торговец продаёт лечение и улучшения за монеты забега. За забеги герой получает очки талантов (меню «Таланты»). После первой победы открывается сложность «Кошмар».</p>
+      <p class="muted">Онлайн с друзьями: главное меню или указатель у костра в лагере. Хозяин лобби создаёт комнату и говорит друзьям код, режим выбирается у порталов общего лагеря. В онлайне игра не встаёт на паузу — выбор улучшения тоже идёт на ходу (пока выбираешь, тебя не бьют). Хозяину нельзя сворачивать игру.</p>
+      <p class="muted">Сохранение: на сюжетной карте прогресс записывается в начале каждого этапа — можно выйти и продолжить. Код сохранения (Настройки) переносит прогресс на другое устройство.</p>
       <p class="muted">Оружие стреляет само. Собирай кристаллы опыта, выбирай улучшения и продержись 10 минут — тогда придёт босс локации. Монеты тратятся в магазине.</p>
       <div class="center"><button class="btn" data-back="menu">Назад</button></div>
     </div>
@@ -299,21 +403,24 @@
     </div>
   </section>
 
-  <script src="js/util.js?v=9"></script>
-  <script src="js/data.js?v=9"></script>
-  <script src="js/sprites.js?v=9"></script>
-  <script src="js/heroart.js?v=9"></script>
-  <script src="js/enemyart.js?v=9"></script>
-  <script src="js/art.js?v=9"></script>
-  <script src="js/audio.js?v=9"></script>
-  <script src="js/input.js?v=9"></script>
-  <script src="js/weapons.js?v=9"></script>
-  <script src="js/game.js?v=9"></script>
-  <script src="js/ui.js?v=9"></script>
-  <script src="js/extra.js?v=9"></script>
-  <script src="js/hub.js?v=9"></script>
-  <script src="js/campaign.js?v=9"></script>
-  <script src="js/main.js?v=9"></script>
-  <script src="js/bot.js?v=9"></script>
+  <script src="js/util.js?v=10"></script>
+  <script src="js/data.js?v=10"></script>
+  <script src="js/sprites.js?v=10"></script>
+  <script src="js/heroart.js?v=10"></script>
+  <script src="js/enemyart.js?v=10"></script>
+  <script src="js/art.js?v=10"></script>
+  <script src="js/audio.js?v=10"></script>
+  <script src="js/input.js?v=10"></script>
+  <script src="js/weapons.js?v=10"></script>
+  <script src="js/game.js?v=10"></script>
+  <script src="js/ui.js?v=10"></script>
+  <script src="js/extra.js?v=10"></script>
+  <script src="js/hub.js?v=10"></script>
+  <script src="js/campaign.js?v=10"></script>
+  <script src="js/save.js?v=10"></script>
+  <script src="js/net.js?v=10"></script>
+  <script src="js/mp.js?v=10"></script>
+  <script src="js/main.js?v=10"></script>
+  <script src="js/bot.js?v=10"></script>
 </body>
 </html>

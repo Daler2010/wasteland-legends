@@ -102,11 +102,11 @@ function slashHit(R, a, r, dmg) {
   }
 }
 
-function sawPositions(w, R) {
-  const s = wStats(w), out = [];
+function sawPositions(w, R, p) {
+  const s = wStats(w), out = [], o = p || R.p;
   for (let i = 0; i < s.count; i++) {
     const a = w.ang + i * Math.PI * 2 / s.count;
-    out.push([R.p.x + Math.cos(a) * s.r, R.p.y + Math.sin(a) * s.r]);
+    out.push([o.x + Math.cos(a) * s.r, o.y + Math.sin(a) * s.r]);
   }
   return out;
 }

@@ -519,3 +519,61 @@ h2 { letter-spacing: 1px; }
   #menu-heroes img { width: 64px; }
   .panel { padding: 16px; }
 }
+
+/* код сохранения */
+.code-box { width: 100%; box-sizing: border-box; font-family: monospace; font-size: 11px; line-height: 1.4; padding: 8px;
+  background: #14162a; color: #f4f4f4; border: 2px solid #566c86; resize: vertical; word-break: break-all; }
+.code-box:focus { outline: none; border-color: #ffcd75; }
+
+/* ================= Онлайн с друзьями ================= */
+.txt { font-family: inherit; font-size: 12px; padding: 10px; background: #14162a; color: var(--text); border: 3px solid var(--muted); width: 100%; user-select: text; -webkit-user-select: text; }
+.txt:focus { outline: none; border-color: var(--gold); }
+.txt.code { text-transform: uppercase; letter-spacing: 6px; font-size: 16px; text-align: center; }
+#on-hero { display: flex; align-items: center; gap: 8px; }
+#on-hero img { width: 32px; height: 32px; }
+#on-status:empty { display: none; }
+#btn-online { border-color: #73eff7; color: #73eff7; }
+#mp-ui { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+#mp-labels { position: absolute; left: 0; top: 0; }
+.hub-label.mp-name { font-size: 7px; padding: 2px 4px; color: #a7f070; border-color: rgba(0, 0, 0, 0.6); background: rgba(20, 22, 42, 0.6); }
+.hub-label.mp-name.me { color: var(--gold); }
+.mp-box { position: absolute; padding: 8px 10px; background: rgba(20, 22, 42, 0.85); border: 3px solid #73eff7; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6); }
+#mp-lobby { top: 10px; left: 10px; pointer-events: auto; max-width: min(320px, 70vw); display: flex; flex-direction: column; gap: 6px; }
+.mp-codeline { font-size: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mp-codeline b { font-size: 14px; letter-spacing: 3px; }
+.mp-pl { display: flex; align-items: center; gap: 6px; font-size: 9px; }
+.mp-pl img { width: 24px; height: 24px; }
+.mp-pl em { font-style: normal; color: var(--muted); font-size: 7px; }
+.mp-pl.me span { color: var(--gold); }
+#mp-players .muted { font-size: 7px; line-height: 1.6; }
+#mp-exit { position: absolute; top: 10px; right: 10px; pointer-events: auto; }
+#hud:not(.hidden) ~ #mp-ui #mp-exit { display: none; }
+#mp-score { top: 96px; right: 10px; font-size: 9px; line-height: 1.8; border-color: var(--gold); }
+#mp-score .dim { opacity: 0.45; }
+#mp-dead { position: absolute; left: 0; right: 0; top: 42%; text-align: center; font-size: clamp(11px, 2.4vw, 16px); color: #ff5a5a; text-shadow: 2px 2px 0 #000; padding: 0 16px; }
+.mp-panel {
+  pointer-events: auto; position: absolute; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: min(520px, 92vw); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; text-align: center;
+  border: 4px solid #73eff7;
+  background: linear-gradient(180deg, #34395a 0%, #262b44 40%, #1e2238 100%);
+  box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.16), inset 0 -6px 0 rgba(0, 0, 0, 0.35), 0 0 0 4px var(--bg), 8px 10px 0 4px rgba(0, 0, 0, 0.55);
+}
+.mp-panel .card-name { font-size: 13px; }
+#mp-go { min-width: 220px; }
+.seg.wrap button { flex: 1 1 140px; }
+#mpe-table { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.mpe-row { display: grid; grid-template-columns: 32px 1fr repeat(var(--n, 3), minmax(44px, auto)); gap: 4px 10px; align-items: center; font-size: 9px; padding: 6px 8px; background: rgba(20, 22, 42, 0.6); border: 2px solid #566c86; text-align: left; }
+.mpe-row.head { background: none; border-color: transparent; color: var(--muted); font-size: 7px; }
+.mpe-row.me { border-color: var(--gold); }
+.mpe-row img { width: 28px; height: 28px; }
+.mpe-row b { color: var(--gold); }
+@media (max-width: 700px) {
+  #mp-lobby { padding: 6px 8px; }
+  .mp-codeline { font-size: 8px; }
+  .mp-panel { padding: 10px 12px; gap: 7px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .mp-panel .muted { font-size: 8px; line-height: 1.6; }
+  #mp-go { min-width: 0; width: 100%; padding: 12px; }
+  .mpe-row { font-size: 8px; gap: 4px 6px; grid-template-columns: 28px 1fr repeat(var(--n, 3), minmax(30px, auto)); }
+  #mp-score { top: 120px; font-size: 8px; }
+}
+.mpe-row > span:nth-child(n+3), .mpe-row > b { text-align: right; }

@@ -291,9 +291,9 @@ const UI = {
     this.set('hptext', 'text', Math.ceil(p.hp) + '/' + p.maxHp);
     this.set('lvl', 'text', 'УР ' + p.level);
     const bossAlive = R.boss && !R.boss.dead;
-    this.set('timer', 'text', bossAlive ? 'БОСС' : R.st ? 'ЭТАП ' + R.st.n + '/3' : R.endless ? '∞ ' + fmtTime(R.t) : fmtTime(R.t));
+    this.set('timer', 'text', R.hudTimer ? R.hudTimer : bossAlive ? 'БОСС' : R.st ? 'ЭТАП ' + R.st.n + '/3' : R.endless ? '∞ ' + fmtTime(R.t) : fmtTime(R.t));
     this.set('objective', 'text', Stage.objective(R)); // сюжетный забег: что делать сейчас
-    this.set('kills', 'text', String(R.kills));
+    this.set('kills', 'text', String(R.hudKills !== undefined ? R.hudKills : R.kills));
     this.set('coins', 'text', String(R.coins));
     const ultPct = Math.floor(p.ult / p.ultCost * 100);
     if (this.hud.ult !== ultPct) {

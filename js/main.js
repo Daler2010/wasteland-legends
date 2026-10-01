@@ -8,6 +8,8 @@
   Extra.init();
   HubUI.init();
   Campaign.init();
+  Checkpoint.init();
+  MP.init();
 
   let last = performance.now();
   function frame(now) {

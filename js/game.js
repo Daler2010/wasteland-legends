@@ -235,10 +235,12 @@ const Game = {
       // шлейф от рывка
       for (const g of R.ghosts) sprFeet(ctx, g.name, g.x, g.y + 12, g.flip, true, HERO_SC, HERO_SC, g.life / 0.25 * 0.5);
       for (const e of R.enemies) {
-        if (e.dead || Math.abs(e.x - cx - W / 2) > W / 2 + 40 || Math.abs(e.y - cy - H / 2) > H / 2 + 40) continue;
+        if (e.dead || e.pvp || Math.abs(e.x - cx - W / 2) > W / 2 + 40 || Math.abs(e.y - cy - H / 2) > H / 2 + 40) continue;
         list.push({ y: e.y + 8 * e.sc, k: 1, o: e, sc: e.sc });
       }
-      if (!(R.ending && !R.won)) list.push({ y: R.p.y + 12, k: 2 });
+      // в сетевой игре героев несколько (R.pl), в одиночной — один R.p
+      if (R.pl) { for (const q of R.pl) if (!q.dead) list.push({ y: q.y + 12, k: 2, o: q }); }
+      else if (!(R.ending && !R.won)) list.push({ y: R.p.y + 12, k: 2 });
     }
 
     list.sort((a, b) => a.y - b.y);
@@ -249,16 +251,15 @@ const Game = {
         sprFeet(ctx, d.name, d.x, d.y, d.flip, false, d.s, d.s);
       }
       else if (it.k === 1) drawEnemy(ctx, it.o, it.sc);
-      else drawPlayer(ctx, R);
+      else drawPlayer(ctx, R, it.o);
     }
 
     // Источники света: герой, огонь, слизни, пули, босс
     if (R) {
-      const p = R.p;
-      lights.push({ x: p.x - cx, y: p.y - cy, r: 88, c: '#ffcd75', a: 0.10 });
+      for (const p of R.pl || [R.p]) if (!p.dead) lights.push({ x: p.x - cx, y: p.y - cy, r: 88, c: '#ffcd75', a: 0.10 });
       for (const ef of R.effects) if (ef.type === 'fire') lights.push({ x: ef.x - cx, y: ef.y - cy, r: ef.r * 2.2, c: '#f59e42', a: 0.4 });
       for (const e of R.enemies) {
-        if (e.dead || lights.length > 70) continue;
+        if (e.dead || e.pvp || lights.length > 70) continue;
         const sx = e.x - cx, sy = e.y - cy;
         if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
         if (e.boss) lights.push({ x: sx, y: sy, r: 50, c: e.enraged ? '#b13e53' : e.def.color, a: 0.3 });
@@ -280,7 +281,7 @@ const Game = {
 
   drawJoystick(ctx) {
     const j = Input.joy;
-    if (!j.active || (this.state !== 'playing' && this.state !== 'hub')) return;
+    if (!j.active || (this.state !== 'playing' && this.state !== 'hub' && this.state !== 'mp')) return;
     const s = this.scale;
     ctx.globalAlpha = 0.45;
     pxCircle(ctx, j.sx / s, j.sy / s, JOY_RADIUS / s, '#f4f4f4');
@@ -1645,8 +1646,9 @@ function drawEnemy(ctx, e, sc) {
 }
 
 // Оружие в руках героя
-function drawHeldWeapon(ctx, R) {
-  const p = R.p, id = R.ch.weapon, cx = Game.camX, cy = Game.camY;
+function drawHeldWeapon(ctx, R, p) {
+  p = p || R.p;
+  const id = (p.ch || R.ch).weapon, cx = Game.camX, cy = Game.camY;
   if (id === 'bow') {
     const a = p.atkT > -1 ? p.aim : (p.face < 0 ? Math.PI : 0);
     const ox = p.x + Math.cos(a) * 6 - cx, oy = p.y + 2 + Math.sin(a) * 5 - cy;
@@ -1679,8 +1681,8 @@ function drawHeldWeapon(ctx, R) {
   }
 }
 
-function drawPlayer(ctx, R) {
-  const p = R.p;
+function drawPlayer(ctx, R, p) {
+  p = p || R.p;
   const blink = p.invT > 0 && p.flash <= 0 && Math.floor(p.invT * 20) % 2 === 0;
   shadow(ctx, p.x, p.y + 10, 11);
   if (p.ramT > 0) {
@@ -1699,7 +1701,7 @@ function drawPlayer(ctx, R) {
     if (p.squashT > 0) { const q = p.squashT / 0.14; sx *= 1 + 0.16 * q; sy *= 1 - 0.14 * q; }
     if (p.turnT > 0) sx *= 1 - 0.65 * (p.turnT / 0.12); // разворот «через ребро»
     sprFeet(ctx, heroFrame(p), p.x, p.y + 12, p.face < 0, p.flash > 0, sx * HERO_SC, sy * HERO_SC);
-    drawHeldWeapon(ctx, R);
+    drawHeldWeapon(ctx, R, p);
   }
   // полоска здоровья под героем
   const bx = Math.round(p.x - 7 - Game.camX), by = Math.round(p.y + 14 - Game.camY);
@@ -1726,10 +1728,13 @@ function drawFire(ctx, ef, cx, cy) {
 
 function drawOverlay(ctx, R, cx, cy, W, H) {
   const p = R.p;
-  // пилы
-  for (const w of p.weapons) {
-    if (w.id !== 'saws') continue;
-    for (const [sx, sy] of sawPositions(w, R)) spr(ctx, 'saw', sx, sy, Math.floor(R.t * 20) % 2 === 0);
+  // пилы (в сетевой игре — у каждого героя свои)
+  for (const q of R.pl || [p]) {
+    if (q.dead) continue;
+    for (const w of q.weapons) {
+      if (w.id !== 'saws') continue;
+      for (const [sx, sy] of sawPositions(w, R, q)) spr(ctx, 'saw', sx, sy, Math.floor(R.t * 20) % 2 === 0);
+    }
   }
   // стрелы и бутылки
   for (const pr of R.projs) {
@@ -1783,7 +1788,7 @@ function drawOverlay(ctx, R, cx, cy, W, H) {
       pxCircle(ctx, ef.x - cx, ef.y - cy, Math.max(1, ef.r - 7), ef.c || '#e86a92');
       ctx.globalAlpha = 1;
     } else if (ef.type === 'slash') {
-      const span = 2.1, start = ef.a - span / 2, end = start + span * Math.min(1, q * 1.8);
+      const span = 2.1, start = ef.a - span / 2, end = start + span * Math.min(1, q * 1.8), o = ef.o || p; // взмах — вокруг того, кто рубил
       const cols = ['#f4f4f4', '#f4f4f4', '#c7dcd0', '#94b0c2', '#566c86'];
       ctx.globalAlpha = 1 - q * 0.7;
       for (let k = 0; k < cols.length; k++) {
@@ -1791,7 +1796,7 @@ function drawOverlay(ctx, R, cx, cy, W, H) {
         ctx.fillStyle = cols[k];
         for (let i = 0; i <= n; i++) {
           const a = start + (end - start) * i / n;
-          ctx.fillRect(Math.round(p.x - cx + Math.cos(a) * rr), Math.round(p.y - cy + Math.sin(a) * rr), 1, 1);
+          ctx.fillRect(Math.round(o.x - cx + Math.cos(a) * rr), Math.round(o.y - cy + Math.sin(a) * rr), 1, 1);
         }
       }
       ctx.globalAlpha = 1;
