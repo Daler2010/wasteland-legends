@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
   <canvas id="game"></canvas>
@@ -62,8 +62,10 @@
   <!-- Онлайн: лобби, подписи, подсказки -->
   <div id="mp-ui" class="hidden">
     <div id="mp-labels"></div>
+    <div id="mp-bubbles"></div>
+    <button id="btn-emote" class="hidden" aria-label="Фразы">ФРАЗЫ<small>T</small></button>
     <div id="mp-lobby" class="mp-box">
-      <div class="mp-codeline">ЛОББИ <b id="mp-code" class="gold"></b> <button class="btn small" id="mp-copy">Копировать</button> <button class="btn small" id="mp-hero">Герой</button></div>
+      <div class="mp-codeline">ЛОББИ <b id="mp-code" class="gold"></b> <button class="btn small" id="mp-copy">Копировать</button> <button class="btn small" id="mp-hero">Герой</button> <button class="btn small" id="mp-rec">Рекорды</button></div>
       <div id="mp-players"></div>
     </div>
     <button class="btn small" id="mp-exit">Меню</button>
@@ -233,7 +235,27 @@
       <div class="center"><button class="btn" id="on-join">ВОЙТИ ПО КОДУ</button></div>
       <p class="muted" id="on-status"></p>
       <p class="muted">В онлайне доступны все герои. Прокачка и таланты — твои, из сюжета. Монеты, собранные отрядом, достаются каждому.</p>
-      <div class="center"><button class="btn" id="on-back">Назад</button></div>
+      <div class="center"><button class="btn small" id="on-rec">Рекорды отряда</button> <button class="btn" id="on-back">Назад</button></div>
+    </div>
+  </section>
+
+  <!-- Онлайн: меню фраз (зажать T или кнопка «ФРАЗЫ») -->
+  <div id="emote-wheel" class="hidden">
+    <div class="em-panel" onclick="event.stopPropagation()">
+      <div id="emote-tabs"></div>
+      <div id="emote-hint">Выбери фразу</div>
+      <div id="emote-cols"></div>
+    </div>
+  </div>
+
+  <!-- Онлайн: рекорды отряда -->
+  <section id="scr-mprec" class="screen modal">
+    <div class="inner panel">
+      <h2 class="gold">Рекорды отряда</h2>
+      <div id="rec-tabs"></div>
+      <div id="rec-list"></div>
+      <p class="muted">Лучшие результаты твоих онлайн-матчей с друзьями: кто был в отряде и за какого героя.</p>
+      <div class="center"><button class="btn" id="rec-back">Назад</button></div>
     </div>
   </section>
 
@@ -407,24 +429,25 @@
     </div>
   </section>
 
-  <script src="js/util.js?v=14"></script>
-  <script src="js/data.js?v=14"></script>
-  <script src="js/sprites.js?v=14"></script>
-  <script src="js/heroart.js?v=14"></script>
-  <script src="js/enemyart.js?v=14"></script>
-  <script src="js/art.js?v=14"></script>
-  <script src="js/audio.js?v=14"></script>
-  <script src="js/input.js?v=14"></script>
-  <script src="js/weapons.js?v=14"></script>
-  <script src="js/game.js?v=14"></script>
-  <script src="js/ui.js?v=14"></script>
-  <script src="js/extra.js?v=14"></script>
-  <script src="js/hub.js?v=14"></script>
-  <script src="js/campaign.js?v=14"></script>
-  <script src="js/save.js?v=14"></script>
-  <script src="js/net.js?v=14"></script>
-  <script src="js/mp.js?v=14"></script>
-  <script src="js/main.js?v=14"></script>
-  <script src="js/bot.js?v=14"></script>
+  <script src="js/util.js?v=16"></script>
+  <script src="js/data.js?v=16"></script>
+  <script src="js/sprites.js?v=16"></script>
+  <script src="js/heroart.js?v=16"></script>
+  <script src="js/enemyart.js?v=16"></script>
+  <script src="js/art.js?v=16"></script>
+  <script src="js/audio.js?v=16"></script>
+  <script src="js/input.js?v=16"></script>
+  <script src="js/weapons.js?v=16"></script>
+  <script src="js/game.js?v=16"></script>
+  <script src="js/ui.js?v=16"></script>
+  <script src="js/extra.js?v=16"></script>
+  <script src="js/hub.js?v=16"></script>
+  <script src="js/campaign.js?v=16"></script>
+  <script src="js/save.js?v=16"></script>
+  <script src="js/net.js?v=16"></script>
+  <script src="js/mp.js?v=16"></script>
+  <script src="js/social.js?v=16"></script>
+  <script src="js/main.js?v=16"></script>
+  <script src="js/bot.js?v=16"></script>
 </body>
 </html>

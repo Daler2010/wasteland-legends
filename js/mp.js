@@ -1282,9 +1282,9 @@ const MP = {
     $('mpe-title').className = res.won && (res.mode !== 'pvp' || res.winner === this.me) ? 'gold' : res.mode === 'pvp' || res.mode === 'race' ? 'gold' : 'red';
     const score = res.mode === 'race' || res.mode === 'pvp';
     const rows = res.rows.slice().sort((a, b) => score ? b.score - a.score : b.dmg - a.dmg);
-    $('mpe-table').style.setProperty('--n', score ? 4 : 3);
-    $('mpe-table').innerHTML = `<div class="mpe-row head"><span></span><span>Игрок</span>${score ? '<span>Очки</span>' : ''}<span>Убито</span><span>Урон</span><span>Смерти</span></div>` +
-      rows.map(r => `<div class="mpe-row ${r.slot === this.me ? 'me' : ''}"><img src="${iconURL(r.sprite, 32)}" alt=""><span>${escapeHTML(r.name)} · ур. ${r.lvl}</span>${score ? `<b>${r.score}</b>` : ''}<span>${r.kills}</span><span>${r.dmg}</span><span>${r.deaths}</span></div>`).join('');
+    $('mpe-table').style.setProperty('--n', score ? 5 : 4);
+    $('mpe-table').innerHTML = `<div class="mpe-row head"><span></span><span>Игрок</span>${score ? '<span>Очки</span>' : ''}<span>Убито</span><span>Урон</span><span>Смерти</span><span>Поднял</span></div>` +
+      rows.map(r => `<div class="mpe-row ${r.slot === this.me ? 'me' : ''}"><img src="${iconURL(r.sprite, 32)}" alt=""><span>${escapeHTML(r.name)} · ур. ${r.lvl}</span>${score ? `<b>${r.score}</b>` : ''}<span>${r.kills}</span><span>${r.dmg}</span><span>${r.deaths}</span><span>${r.rev || 0}</span></div>`).join('');
     $('mpe-info').textContent = `${M.name} · ${fmtTime(res.t)} · монеты отряда: +${res.coins || 0} (уже у тебя в копилке)` + (me ? '' : '');
     $('mpe-lobby').classList.toggle('hidden', !this.isHost());
     $('mpe-wait').classList.toggle('hidden', this.isHost());

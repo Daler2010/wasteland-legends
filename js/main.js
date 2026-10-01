@@ -23,6 +23,7 @@
   Campaign.init();
   Checkpoint.init();
   MP.init();
+  Social.init();
 
   let last = performance.now();
   function frame(now) {

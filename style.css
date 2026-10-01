@@ -579,3 +579,42 @@ h2 { letter-spacing: 1px; }
   #mp-score { top: 120px; font-size: 8px; }
 }
 .mpe-row > span:nth-child(n+3), .mpe-row > b { text-align: right; }
+/* ===== Онлайн: фразы, пузыри, рекорды ===== */
+#mp-bubbles { position: absolute; left: 0; top: 0; }
+.em-bubble { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 9px; padding: 4px 6px; color: #1a1c2c; background: #f4f4f4; border: 2px solid var(--c, #f4f4f4); border-radius: 4px; box-shadow: 2px 2px 0 rgba(0,0,0,0.5); animation: em-pop 0.15s steps(3); transition: opacity 0.2s; }
+.em-bubble::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -3px; border: 3px solid transparent; border-top-color: var(--c, #f4f4f4); }
+@keyframes em-pop { from { transform: scale(0.4); } }
+#btn-emote { pointer-events: auto; position: absolute; right: 16px; bottom: calc(max(24px, env(safe-area-inset-bottom)) + 96px); width: 68px; height: 68px; border-radius: 50%; font-family: inherit; font-size: 7px; padding: 0; color: var(--text); background: rgba(51, 60, 87, 0.75); border: 4px solid var(--line); box-shadow: 4px 4px 0 rgba(0,0,0,0.6); cursor: pointer; touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+#btn-emote small { font-size: 7px; color: var(--muted); }
+#btn-emote:active { transform: translate(2px, 2px); }
+#emote-wheel { position: fixed; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(10, 12, 24, 0.45); padding: 16px; }
+#emote-wheel.hidden { display: none; }
+.em-panel { background: rgba(26, 28, 44, 0.95); border: 4px solid var(--line); box-shadow: 6px 6px 0 rgba(0,0,0,0.6); padding: 10px; max-width: 100%; }
+#emote-hint { text-align: center; font-size: 10px; color: var(--gold); margin-bottom: 8px; min-height: 12px; }
+#emote-cols { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 6px; }
+#emote-tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
+.em-tab { font-family: inherit; font-size: 9px; color: var(--muted); background: #262b44; border: 2px solid #566c86; padding: 6px 14px; cursor: pointer; }
+.em-tab.on { color: var(--gold); border-color: var(--gold); background: #5d275d; }
+.em-bubble.meme { font-size: 11px; padding: 5px 8px; font-weight: bold; color: #1a1c2c; background: var(--c); border-color: #1a1c2c; }
+.em-bubble.meme::after { border-top-color: #1a1c2c; }
+.em-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.em-head { font-size: 7px; text-align: center; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.em-btn { font-family: inherit; font-size: 8px; color: var(--text); background: #333c57; border: 2px solid var(--c); padding: 6px 4px; cursor: pointer; min-height: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; overflow: hidden; }
+.em-btn img { width: 20px; height: 20px; image-rendering: pixelated; }
+.em-btn.on, .em-btn:hover { background: var(--c); color: #1a1c2c; }
+#rec-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+#rec-tabs .btn.on { border-color: var(--gold); color: var(--gold); }
+#rec-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.rec-row { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; font-size: 9px; padding: 6px 8px; background: rgba(20, 22, 42, 0.6); border: 2px solid #566c86; text-align: left; }
+.rec-row.won { border-color: var(--gold); }
+.rec-row b { color: var(--gold); font-size: 12px; }
+.rec-row em { font-style: normal; color: var(--muted); font-size: 7px; }
+.rec-team { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; color: var(--muted); font-size: 7px; }
+.rec-team span { display: flex; align-items: center; gap: 3px; }
+.rec-team img { width: 16px; height: 16px; }
+@media (max-width: 560px) {
+  .em-btn { font-size: 6px; padding: 5px 2px; }
+  .em-head { font-size: 6px; }
+  #emote-cols { gap: 3px; }
+  .em-panel { padding: 6px; }
+}
