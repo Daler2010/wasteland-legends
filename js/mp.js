@@ -1073,10 +1073,16 @@ const MP = {
     Game.state = 'menu';
     $('on-name').value = Save.data.nick || '';
     $('on-code').value = '';
-    const ch = CHARACTERS.find(c => c.id === this.myHero());
-    $('on-hero').innerHTML = `<img src="${iconURL(ch.sprite, 32)}" alt=""> ${ch.name} — сменить героя можно у костра в лагере`;
+    this.onHeroUI();
     this.status('');
     UI.show('online');
+  },
+
+  // герой на экране «Онлайн»: можно выбрать любого ещё до входа в лобби
+  onHeroUI() {
+    const ch = CHARACTERS.find(c => c.id === this.myHero());
+    $('on-hero').innerHTML = `<img src="${iconURL(ch.sprite, 32)}" alt=""> <span>Герой: <b class="gold">${ch.name}</b></span> <button class="btn small" id="on-pick">Сменить героя</button>`;
+    $('on-pick').onclick = () => { UI.click(); this.heroPicker(); };
   },
 
   // Вход в сцену: прячем меню, показываем свой интерфейс
@@ -1198,6 +1204,7 @@ const MP = {
         UI.click();
         const prof = this.profile(b.dataset.h);
         Save.data.mpHero = prof.hero; Save.store();
+        if (!this.on) { this.showOnline(); return; } // выбор до входа в лобби
         if (this.isHost()) { const r = this.rosterOf(this.me); r.hero = prof.hero; r.prof = prof; this.swapHero(r); this.sendRoster(); }
         else Net.toHost({ k: 'hero', prof });
         UI.show(null);
@@ -1325,7 +1332,8 @@ const MP = {
     $('mp-copy').onclick = async () => { UI.click(); try { await navigator.clipboard.writeText(this.code); UI.banner('Код скопирован: ' + this.code, 1.5); } catch (e) { UI.banner('Код: ' + this.code, 2); } };
     $('mp-exit').onclick = () => { UI.click(); this.menu(); };
     $('mp-go').onclick = () => this.useZone();
-    $('mph-back').onclick = () => { UI.click(); UI.show(null); };
+    $('mph-back').onclick = () => { UI.click(); if (this.on) UI.show(null); else this.showOnline(); };
+    $('mp-hero').onclick = () => { UI.click(); if (this.scene === 'lobby' && !UI.current) this.heroPicker(); };
     $('mpm-back').onclick = () => { UI.click(); UI.show(null); };
     $('mpmenu-back').onclick = () => { UI.click(); UI.show(null); };
     $('mpmenu-leave').onclick = () => { UI.click(); this.leave(); };
