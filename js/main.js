@@ -15,10 +15,13 @@
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    Pad.poll();
-    Game.update(dt);
-    Game.render();
     requestAnimationFrame(frame);
+    // редкая ошибка не должна навсегда останавливать игру (в онлайне замерло бы у всех)
+    try {
+      Pad.poll();
+      Game.update(dt);
+      Game.render();
+    } catch (e) { console.error(e); }
   }
   requestAnimationFrame(frame);
 

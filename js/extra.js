@@ -574,6 +574,8 @@ const Settings = {
     $('set-sfx').value = s.sfx ? Math.round(s.sfxVol * 100) : 0;
     this.seg('set-shake', 'shake');
     this.seg('set-btn', 'btn');
+    if (s.net === undefined) s.net = 1;
+    this.seg('set-net', 'net');
     UI.show('settings');
   },
   seg(elId, key) {

@@ -4,7 +4,9 @@
 // В забеге героев несколько (R.pl); общий код игры работает «от лица» одного из них — MP.use(p) ставит R.p = p.
 
 const MP_MAX = 4;
-const MP_SNAP = 1 / 15, MP_SEND = 1 / 20;
+const MP_SNAP = 1 / 15, MP_SNAP_LEAN = 1 / 10, MP_SEND = 1 / 20;
+// настройка «Онлайн-связь»: 0 — быстрая (минимум задержки), 1 — авто, 2 — слабый интернет (меньше данных, больше запас)
+const MP_NET_EXTRA = [10, 35, 90]; // мс запаса в буфере плавности у гостя
 const PVP_DMG = 0.25; // оружие рассчитано на орды — по героям оно бьёт слабее
 
 const MP_MODES = {
@@ -185,7 +187,13 @@ const MP = {
         Sound.sfx('coin');
         break;
       }
-      case 'st': if (p) { p.net = m; p.W = m.W || 320; p.H = m.H || 180; } break;
+      case 'st': if (p) { p.net = m; p.W = m.W || 320; p.H = m.H || 180; p.nm = m.nm; } break;
+      case 'pg': {
+        Net.send(slot, { k: 'po', t: m.t });
+        const r = this.rosterOf(slot);
+        if (r && m.r && r.ping !== m.r) { r.ping = m.r; if (this.scene === 'lobby') this.rosterUI(); }
+        break;
+      }
       case 'ult': if (p) p.ultQ = true; break;
       case 'pick': if (p) this.pick(p, m.i, m.s); break;
       case 'hero': {
@@ -599,7 +607,11 @@ const MP = {
     const cx = v.x, cy = v.y, hw = W / 2 + 50, hh = H / 2 + 50;
     const inV = (x, y, m) => Math.abs(x - cx) < hw + (m || 0) && Math.abs(y - cy) < hh + (m || 0);
     const r1 = x => Math.round(x), r2 = x => Math.round(x * 100) / 100;
-    const s = { k: 's', t: r2(R.t) };
+    const s = { k: 's', t: r2(R.t), ts: Math.round(performance.now()) };
+    const lean = !!p.lean, ke = p.ke || (p.ke = new Map()), kn = new Map();
+    if (lean) s.ln = 1;
+    // раз в 2 секунды шлём врагов целиком — на случай, если гость что-то упустил
+    if ((p.snapN = (p.snapN || 0) + 1) % 30 === 0) ke.clear();
     s.P = R.pl.map(q => {
       let fl = 0;
       if (q.invT > 0) fl |= 1; if (q.flash > 0) fl |= 2; if (q.dead) fl |= 4; if (q.offer) fl |= 8; if (q.dashT > 0) fl |= 16;
@@ -616,8 +628,13 @@ const MP = {
       if (e.flash > 0) fl |= 1; if (e.atkT > 0) fl |= 2; if (e.elite) fl |= 4; if (e.enraged) fl |= 8; if (e.stunT > 0) fl |= 16;
       if (e.mv) fl |= 32; if (e.lst === 1) fl |= 64; if (e.lst === 2) fl |= 128; if (e.fuse > 0) fl |= 256; if (e.tele > 0) fl |= 512;
       if (e.dash > 0) fl |= 1024; if (e.spawnT > 0) fl |= 2048; if (e.squash > 0) fl |= 4096; if (e.face < 0) fl |= 8192;
-      s.E.push([e.id, MP_TYPES.indexOf(e.boss ? '#' + bossId(e) : e.type), r1(e.x), r1(e.y), fl, Math.ceil(Math.max(0, e.hp) / e.maxHp * 100), Math.round(e.sc * 10), Math.round(e.anim * 10) % 1000]);
+      const hpp = Math.ceil(Math.max(0, e.hp) / e.maxHp * 100), sc10 = Math.round(e.sc * 10);
+      // знакомый гостю враг — только положение, флаги и здоровье
+      if (ke.get(e.id) === sc10) s.E.push([e.id, r1(e.x), r1(e.y), fl, hpp]);
+      else s.E.push([e.id, MP_TYPES.indexOf(e.boss ? '#' + bossId(e) : e.type), r1(e.x), r1(e.y), fl, hpp, sc10, Math.round(e.anim * 10) % 1000]);
+      kn.set(e.id, sc10);
     }
+    p.ke = kn;
     s.B = [];
     for (const b of R.ebullets) if (inV(b.x, b.y, 20)) s.B.push([r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.big ? 1 : 0, b.c]);
     s.J = [];
@@ -651,17 +668,23 @@ const MP = {
     for (const id of kp.keys()) if (!vis.has(id)) { s.Kd.push(id); kp.delete(id); }
     // новые частицы, цифры урона, смерти врагов и тени рывков — только то, что в кадре
     s.Q = []; s.T = []; s.D = []; s.G = [];
-    for (const q of R.particles) if (!q.s_ && s.Q.length < 70 && inV(q.x, q.y)) s.Q.push([r1(q.x), r1(q.y), r1(q.vx), r1(q.vy), r2(q.life), q.c, q.s, q.g === undefined ? 160 : q.g]);
-    for (const t of R.texts) if (!t.s_ && s.T.length < 25 && inV(t.x, t.y)) s.T.push([r1(t.x), r1(t.y), t.v, t.c, t.big ? 1 : 0]);
-    for (const d of R.deaths) if (!d.s_ && inV(d.x, d.y, 30)) s.D.push([d.sprite, r1(d.x), r1(d.y), d.face, r2(d.sc), r2(d.ds)]);
-    for (const g of R.ghosts) if (!g.s_ && g.slot !== p.slot && inV(g.x, g.y)) s.G.push([g.name, r1(g.x), r1(g.y), g.flip ? 1 : 0, r2(g.life)]);
+    const maxQ = lean ? 12 : 60, maxT = lean ? 10 : 25;
+    for (const q of R.particles) if (!q.s_ && s.Q.length < maxQ && inV(q.x, q.y)) s.Q.push([r1(q.x), r1(q.y), r1(q.vx), r1(q.vy), r2(q.life), q.c, q.s, q.g === undefined ? 160 : q.g]);
+    for (const t of R.texts) if (!t.s_ && s.T.length < maxT && inV(t.x, t.y)) s.T.push([r1(t.x), r1(t.y), t.v, t.c, t.big ? 1 : 0]);
+    const deaths = (p.dAcc || []).concat(R.deaths.filter(d => !d.s_));
+    p.dAcc = [];
+    for (const d of deaths) if (inV(d.x, d.y, 30)) s.D.push([d.sprite, r1(d.x), r1(d.y), d.face, r2(d.sc), r2(d.ds)]);
+    if (!lean) for (const g of R.ghosts) if (!g.s_ && g.slot !== p.slot && inV(g.x, g.y)) s.G.push([g.name, r1(g.x), r1(g.y), g.flip ? 1 : 0, r2(g.life)]);
     // свой герой: прокачка, выбор улучшения и личные события
     const ev = this.ev;
     s.me = { sp: r2(p.speed), xp: r2(p.xp), xn: p.xpNext, u: r2(p.ult), uc: p.ultCost, ucd: r2(p.ultCd), w: p.weapons.map(w => [w.id, w.lvl, w.evo ? 1 : 0]), ps: p.passives,
       o: p.offer ? { s: p.offerSeq, l: p.offer, k: p.offerKind } : null, fx: p.fx, dm: r2(p.dashMul), mg: r1(p.magnet) };
     p.fx = [];
     s.H = this.hud(R, p);
-    s.ev = { sfx: [...ev.sfx], ban: ev.ban, mus: ev.mus, sh: r2(ev.shake) };
+    const acc = p.evAcc;
+    p.evAcc = null;
+    s.ev = acc ? { sfx: [...new Set([...acc.sfx, ...ev.sfx])], ban: acc.ban.concat(ev.ban), mus: ev.mus !== null ? ev.mus : acc.mus, sh: r2(Math.max(acc.shake, ev.shake)) }
+      : { sfx: [...ev.sfx], ban: ev.ban, mus: ev.mus, sh: r2(ev.shake) };
     s.W = [r2(R.weatherW), r2(Math.max(0, R.storm)), r2(Math.max(0, R.gold)), R.combo];
     return s;
   },
@@ -682,14 +705,27 @@ const MP = {
     if (R.mp.mode === 'race' || R.mp.mode === 'pvp') h.sb = R.pl.map(q => [q.slot, q.score]);
     return h;
   },
+  netMode() { const v = Save.data.settings.net; return v === 0 || v === 2 ? v : 1; },
   hostSend(dt) {
+    const R = this.R, hostNm = this.netMode();
     this.sendAcc += dt;
-    if (this.sendAcc < MP_SNAP) return;
-    this.sendAcc = 0;
-    const R = this.R;
+    for (const p of R.pl) if (p.lagT > 0) p.lagT -= dt;
+    // у хозяина слабый интернет — снимки реже и легче для всех
+    const every = hostNm === 2 ? MP_SNAP_LEAN : MP_SNAP;
+    if (this.sendAcc < every) return;
+    this.sendAcc = Math.min(this.sendAcc - every, every);
     for (const p of R.pl) {
       if (p.slot === this.me) continue;
-      if (Net.buffered(p.slot) > 256 * 1024) continue; // сеть гостя не успевает — пропускаем снимок
+      // данные копятся и не уходят — сеть гостя не успевает: пропускаем снимок и на 8 секунд облегчаем следующие
+      if (Net.buffered(p.slot) > 48 * 1024) { p.lagT = 8; continue; }
+      p.lean = hostNm === 2 || p.nm === 2 || p.lagT > 0;
+      // облегчённому гостю — каждый второй снимок; звуки, надписи и смерти врагов копятся до следующего
+      if (p.lean && hostNm !== 2 && (p.skip = !p.skip)) {
+        const ev = this.ev, a = p.evAcc || (p.evAcc = { sfx: [], ban: [], mus: null, shake: 0 });
+        a.sfx.push(...ev.sfx); a.ban.push(...ev.ban); if (ev.mus !== null) a.mus = ev.mus; a.shake = Math.max(a.shake, ev.shake);
+        (p.dAcc || (p.dAcc = [])).push(...R.deaths.filter(d => !d.s_));
+        continue;
+      }
       Net.send(p.slot, this.snapFor(p));
     }
     // зрители (вошли во время забега) смотрят глазами хозяина
@@ -733,7 +769,8 @@ const MP = {
       case 'hi': this.me = m.slot; break;
       case 'ros': this.roster = m.list; this.applyRoster(); this.rosterUI(); break;
       case 'start': this.clientStart(m); break;
-      case 's': if (this.R) this.applySnap(m); if (performance.now() - (this.pingT || 0) > 2000) { this.pingT = performance.now(); Net.toHost({ k: 'pg' }); } break;
+      case 's': if (this.R) this.applySnap(m); if (performance.now() - (this.pingT || 0) > 2000) { this.pingT = performance.now(); Net.toHost({ k: 'pg', t: Math.round(this.pingT), r: this.rtt || 0 }); } break;
+      case 'po': this.rtt = Math.max(1, Math.round(performance.now() - m.t)); break;
       case 'end': this.showEnd(m.res); break;
       case 'bye': this.lost('Хозяин закрыл лобби'); break;
     }
@@ -746,12 +783,12 @@ const MP = {
       mp: { mode: m.mode, cfg: m.cfg, tombs: [] }, view: true, loc, t: m.t, cx: 0, cy: 0, shake: 0, hurtFlash: 0, flashT: 0, hitstop: 0,
       effects: [], pickups: [], deaths: [], ghosts: [], enemies: [], projs: [], ebullets: [], particles: [], texts: [],
       storm: 0, gold: 0, boss: null, weatherW: 0, ending: false, won: false, st: null, mods: {}, combo: 0, kills: 0, coins: 0,
-      pl: [], p: null, dmgBy: {}, lastSnap: performance.now(), snapDt: 66, emap: new Map(), jmap: new Map() };
+      pl: [], p: null, dmgBy: {}, lastSnap: performance.now(), emap: new Map(), jmap: new Map(), off: null, jit: 0, ivl: 66, delay: 110 };
     this.scene = m.sc; this.ended = false; this.coinsTaken = false;
     if (m.ros) this.roster = m.ros;
     for (const [slot, x, y, tq] of m.pl) {
       const p = this.viewPlayer(slot);
-      p.x = p.ix0 = p.ix1 = x; p.y = p.iy0 = p.iy1 = y;
+      p.x = x; p.y = y;
       if (slot === this.me) { this.tpAck = tq; V.cx = x; V.cy = y; }
       V.pl.push(p);
     }
@@ -777,7 +814,7 @@ const MP = {
     if (!V || !V.view) return;
     for (const r of this.roster) {
       let p = V.pl.find(q => q.slot === r.slot);
-      if (p && p.ch.id !== r.hero) { const n = this.viewPlayer(r.slot); Object.assign(n, { x: p.x, y: p.y, ix0: p.x, ix1: p.x, iy0: p.y, iy1: p.y }); V.pl[V.pl.indexOf(p)] = n; p = n; }
+      if (p && p.ch.id !== r.hero) { const n = this.viewPlayer(r.slot); Object.assign(n, { x: p.x, y: p.y, hs: p.hs }); V.pl[V.pl.indexOf(p)] = n; p = n; }
       if (p) { p.name = r.name; p.sprite = r.sprite; }
     }
     V.pl = V.pl.filter(p => this.rosterOf(p.slot));
@@ -785,24 +822,38 @@ const MP = {
   },
 
   applySnap(s) {
-    const V = this.R, now = performance.now();
-    V.snapDt = clamp(now - V.lastSnap, 30, 250); V.lastSnap = now;
+    const V = this.R, now = performance.now(), ts = s.ts || now;
+    V.lastSnap = now; V.lean = !!s.ln;
     V.t = s.t;
+    // часы хозяина относительно своих: берём самый «быстрый» снимок, опоздания копим как дрожание сети
+    const o = ts - now;
+    if (V.off === null || o > V.off + 400 || o < V.off - 1500) { V.off = o; V.jit = 0; }
+    else if (o > V.off) V.off += (o - V.off) * 0.3;
+    else { V.off += (o - V.off) * 0.005; V.jit = Math.max(V.jit * 0.99, V.off - o); }
+    if (V.lastTs && ts > V.lastTs) V.ivl += (clamp(ts - V.lastTs, 30, 300) - V.ivl) * 0.1;
+    V.lastTs = ts;
+    // положения складываем в короткую историю — рисуем их чуть «в прошлом», зато плавно
+    const keep = (o, x, y) => {
+      const h = o.hs || (o.hs = []), n = h.length;
+      if (n && (ts <= h[n - 3] || Math.abs(x - h[n - 2]) + Math.abs(y - h[n - 1]) > 160)) h.length = 0; // телепорт или сбой часов
+      h.push(ts, x, y);
+      if (h.length > 18) h.splice(0, 3);
+    };
     const me = this.meP();
     // герои
     const seen = new Set();
     for (const a of s.P) {
       const [slot, x, y, face, dx, dy, mvx, mvy, fl, hp, maxHp, rsp, lvl, atk, aim, saw, score, kills, ram] = a;
       let p = V.pl.find(q => q.slot === slot);
-      if (!p) { p = this.viewPlayer(slot); p.x = p.ix0 = p.ix1 = x; p.y = p.iy0 = p.iy1 = y; V.pl.push(p); }
+      if (!p) { p = this.viewPlayer(slot); p.x = x; p.y = y; V.pl.push(p); }
       seen.add(slot);
       const wasDead = p.dead;
       Object.assign(p, { hp, maxHp, respawnT: rsp, level: lvl, dead: !!(fl & 4), choosing: !!(fl & 8), score, kills });
       p.invT = fl & 1 ? Math.max(p.invT, 0.2) : 0; p.flash = fl & 2 ? 0.1 : 0; p.ramT = ram;
       if (fl & 32 && p.squashT <= 0) p.squashT = 0.14;
       if (p === me) continue;
-      if (wasDead && !p.dead) { p.x = p.ix0 = x; p.y = p.iy0 = y; }
-      p.ix0 = p.x; p.iy0 = p.y; p.ix1 = x; p.iy1 = y;
+      if (wasDead && !p.dead) { p.x = x; p.y = y; p.hs = null; }
+      keep(p, x, y);
       if (face !== p.face) { p.face = face; p.turnT = 0.12; }
       Object.assign(p, { dirX: dx, dirY: dy, mvx, mvy, dashT: fl & 16 ? 0.1 : 0, aim });
       if (atk > 0) p.atkT = atk;
@@ -812,29 +863,37 @@ const MP = {
     // враги: те же объекты по номеру, чтобы плавно двигать между снимками
     const emap = new Map(), list = [];
     for (const a of s.E) {
-      const [id, ti, x, y, fl, hpp, sc10, an] = a;
-      let e = V.emap.get(id);
-      const type = MP_TYPES[ti] || 'zombie', boss = type[0] === '#';
-      if (!e) {
-        const def = boss ? BOSSES[type.slice(1)] : ENEMIES[type];
-        e = { id, type: boss ? 'boss' : type, def, boss, x, y, ix0: x, iy0: y, ix1: x, iy1: y, anim: an / 10, flash: 0, squash: 0, spawnT: fl & 2048 ? 0.3 : 0, face: 1, maxHp: 100, lunge: { wind: 0.5 }, dead: false };
+      let e = V.emap.get(a[0]), x, y, fl, hpp;
+      if (a.length === 5) { // знакомый враг: только движение
+        if (!e) continue;
+        [, x, y, fl, hpp] = a;
+      } else {
+        const [id, ti, , , , , sc10, an] = a;
+        [, , x, y, fl, hpp] = a;
+        const type = MP_TYPES[ti] || 'zombie', boss = type[0] === '#';
+        if (!e) {
+          const def = boss ? BOSSES[type.slice(1)] : ENEMIES[type];
+          e = { id, type: boss ? 'boss' : type, def, boss, x, y, anim: an / 10, flash: 0, squash: 0, spawnT: fl & 2048 ? 0.3 : 0, face: 1, maxHp: 100, lunge: { wind: 0.5 }, dead: false };
+        }
+        e.sc = sc10 / 10;
+        if (Math.abs(e.anim - an / 10) > 0.5 && an / 10 > 0.05) e.anim = an / 10;
       }
-      e.ix0 = e.x; e.iy0 = e.y; e.ix1 = x; e.iy1 = y;
-      e.hp = hpp; e.sc = sc10 / 10; e.elite = !!(fl & 4); e.enraged = !!(fl & 8); e.stunT = fl & 16 ? 0.2 : 0; e.mv = !!(fl & 32);
+      keep(e, x, y);
+      e.hp = hpp; e.elite = !!(fl & 4); e.enraged = !!(fl & 8); e.stunT = fl & 16 ? 0.2 : 0; e.mv = !!(fl & 32);
       e.lst = fl & 64 ? 1 : fl & 128 ? 2 : 0; e.lt = 0.25; e.fuse = fl & 256 ? 0.35 : 0; e.tele = fl & 512 ? 0.3 : 0; e.dash = fl & 1024 ? 0.3 : 0;
       e.atkT = fl & 2 ? 0.2 : 0; e.face = fl & 8192 ? -1 : 1;
       if (fl & 1) { if (e.flash <= 0) e.squash = 0.12; e.flash = 0.1; }
-      if (Math.abs(e.anim - an / 10) > 0.5 && an / 10 > 0.05) e.anim = an / 10;
-      emap.set(id, e); list.push(e);
+      emap.set(e.id, e); list.push(e);
     }
     V.emap = emap; V.enemies = list;
-    V.ebullets = s.B.map(([x, y, vx, vy, big, c]) => ({ x, y, vx, vy, big: !!big, c }));
+    V.ebullets = s.B.map(([x, y, vx, vy, big, c]) => ({ x, y, x0: x, y0: y, ts, vx, vy, big: !!big, c }));
     const jmap = new Map();
     V.projs = s.J.map(([id, code, x, y, vx, vy, fl, q]) => {
       let pr = V.jmap.get(id);
       const type = code <= 2 ? 'arrow' : MP_PROJ[code];
-      if (!pr || pr.type !== type) pr = { id, type, x, y, t: 0, ix0: x, iy0: y };
-      Object.assign(pr, { ix0: pr.x, iy0: pr.y, ix1: x, iy1: y, vx, vy, star: code === 1, pellet: code === 2, fire: !!(fl & 1), big: !!(fl & 2), arm: fl & 4 ? 1 : 0, dur: 1 });
+      if (!pr || pr.type !== type) pr = { id, type, x, y, t: 0 };
+      keep(pr, x, y);
+      Object.assign(pr, { vx, vy, star: code === 1, pellet: code === 2, fire: !!(fl & 1), big: !!(fl & 2), arm: fl & 4 ? 1 : 0, dur: 1 });
       if (type === 'bottle') pr.t = q;
       jmap.set(id, pr);
       return pr;
@@ -919,9 +978,22 @@ const MP = {
     }
     if (me && this.scene === 'lobby') Input.ultQ = false;
     if (Input.ultQ) { Input.ultQ = false; if (me && !me.dead) Net.toHost({ k: 'ult' }); }
-    // плавно ведём всех остальных между снимками
-    const q = clamp((performance.now() - V.lastSnap) / V.snapDt, 0, 1.15);
-    const lerp = o => { o.x = o.ix0 + (o.ix1 - o.ix0) * q; o.y = o.iy0 + (o.iy1 - o.iy0) * q; };
+    // плавно ведём всех остальных: мир рисуется с небольшой задержкой (буфер), чтобы неровная сеть не дёргала картинку
+    const want = clamp(V.ivl + MP_NET_EXTRA[this.netMode()] + V.jit * 1.1, 40, 450);
+    V.delay += (want - V.delay) * Math.min(1, dt * 1.5);
+    const rt = V.off === null ? 0 : performance.now() + V.off - V.delay;
+    const lerp = o => {
+      const h = o.hs;
+      if (!h || !h.length) return;
+      const n = h.length;
+      if (rt <= h[0]) { o.x = h[1]; o.y = h[2]; return; }
+      for (let i = 3; i < n; i += 3) {
+        if (rt <= h[i]) { const a = (rt - h[i - 3]) / (h[i] - h[i - 3] || 1); o.x = h[i - 2] + (h[i + 1] - h[i - 2]) * a; o.y = h[i - 1] + (h[i + 2] - h[i - 1]) * a; return; }
+      }
+      // снимок опаздывает — недолго продолжаем движение по инерции
+      if (n >= 6) { const a = Math.min(rt - h[n - 3], 120) / (h[n - 3] - h[n - 6] || 1); o.x = h[n - 2] + (h[n - 2] - h[n - 5]) * a; o.y = h[n - 1] + (h[n - 1] - h[n - 4]) * a; }
+      else { o.x = h[n - 2]; o.y = h[n - 1]; }
+    };
     for (const p of V.pl) {
       if (p === me) continue;
       lerp(p);
@@ -936,7 +1008,7 @@ const MP = {
       if (e.def && e.def.ai === 'hop' && !e.lst) e.hop = (e.anim * 1.5) % 1;
     }
     for (const pr of V.projs) { lerp(pr); pr.t += dt; }
-    for (const b of V.ebullets) { b.x += b.vx * dt; b.y += b.vy * dt; }
+    for (const b of V.ebullets) { const k = Math.max(-0.06, (rt - b.ts) / 1000); b.x = b.x0 + b.vx * k; b.y = b.y0 + b.vy * k; }
     for (const ef of V.effects) ef.t = Math.min(ef.dur, ef.t + dt);
     updateParticles(V, dt); updateTexts(V, dt);
     for (const g of V.ghosts) g.life -= dt;
@@ -953,7 +1025,7 @@ const MP = {
       this.stateAcc = 0;
       const r2 = x => Math.round(x * 100) / 100;
       Net.toHost({ k: 'st', x: r2(me.x), y: r2(me.y), f: me.face, dx: r2(me.dirX), dy: r2(me.dirY), mv: me.moving ? 1 : 0,
-        vx: Math.round(me.mvx), vy: Math.round(me.mvy), d: me.dashT > 0 ? r2(me.dashT) : 0, tq: this.tpAck, W: Game.W, H: Game.H });
+        vx: Math.round(me.mvx), vy: Math.round(me.mvy), d: me.dashT > 0 ? r2(me.dashT) : 0, tq: this.tpAck, W: Game.W, H: Game.H, nm: this.netMode() });
     }
   },
 
@@ -1030,7 +1102,7 @@ const MP = {
     $('mp-code').textContent = this.code || '';
     $('mp-players').innerHTML = this.roster.map(r => {
       const ch = CHARACTERS.find(c => c.id === r.hero) || CHARACTERS[0];
-      return `<div class="mp-pl ${r.slot === this.me ? 'me' : ''}"><img src="${iconURL(r.sprite || (r.prof && r.prof.stats.sprite) || ch.sprite, 32)}" alt=""><span>${escapeHTML(r.name)}${r.slot === 0 ? ' ♛' : ''}</span><em>${ch.name}</em></div>`;
+      return `<div class="mp-pl ${r.slot === this.me ? 'me' : ''}"><img src="${iconURL(r.sprite || (r.prof && r.prof.stats.sprite) || ch.sprite, 32)}" alt=""><span>${escapeHTML(r.name)}${r.slot === 0 ? ' ♛' : ''}</span><em>${ch.name}${r.ping && r.slot !== this.me ? ' · ' + r.ping + ' мс' : ''}</em></div>`;
     }).join('') + (this.roster.length < MP_MAX ? `<div class="muted">Мест: ${MP_MAX - this.roster.length}. Друзья вводят код на экране «Онлайн».</div>` : '');
   },
 
@@ -1073,6 +1145,27 @@ const MP = {
       }).join('');
       if (html !== this.sbHTML) { this.sbHTML = html; $('mp-score').innerHTML = html; }
     }
+    this.netUI(R);
+  },
+  // качество связи: гостю — его пинг, хозяину — самый медленный гость
+  netUI(R) {
+    const now = performance.now();
+    let text = '', cls = '';
+    const grade = ms => ms < 90 ? 'good' : ms < 180 ? 'mid' : 'bad';
+    if (!this.isHost()) {
+      if (now - (Net.seen.host || now) > 1200) { text = 'СВЯЗЬ ПРЕРЫВАЕТСЯ...'; cls = 'bad'; }
+      else if (this.rtt) { text = 'ПИНГ ' + this.rtt + ' МС' + (R.lean ? ' · ЭКОНОМНО' : ''); cls = grade(this.rtt); }
+    } else {
+      const guests = this.roster.filter(r => r.slot !== this.me && r.ping);
+      if (guests.length) {
+        const w = guests.reduce((a, r) => r.ping > a.ping ? r : a);
+        const slow = R.pl.find(p => p.slot !== this.me && p.lagT > 0);
+        text = slow ? 'У ' + (slow.name || '?').toUpperCase() + ' СЛАБАЯ СВЯЗЬ' : 'ПИНГ ГОСТЕЙ ДО ' + w.ping + ' МС';
+        cls = slow ? 'bad' : grade(w.ping);
+      }
+    }
+    const el = $('mp-net'), key = text + cls;
+    if (key !== this.netKey) { this.netKey = key; el.textContent = text; el.className = text ? cls : 'hidden'; }
   },
 
   promptUI() {
@@ -1504,7 +1597,8 @@ const MP_MODE_LOGIC = {
   strike = function (R, ef) {
     if (!R.mp) return st(R, ef);
     const cur = R.p, rr = ef.r + 4;
-    R.p = { x: 1e9, y: 1e9, r: 0 }; // сам разряд — без героя
+    // сам разряд — «герой» далеко, чтобы не задеть текущего дважды (характеристики берутся от него — иначе урон по врагам падал)
+    R.p = Object.assign(Object.create(cur || R.pl[0]), { x: 1e9, y: 1e9 });
     st(R, ef);
     for (const p of MP.alive(R)) if (dist2(p.x, p.y, ef.x, ef.y) < rr * rr) MP.hurt(R, p, 14);
     R.p = cur;

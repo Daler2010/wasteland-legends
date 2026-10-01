@@ -4,10 +4,11 @@
 
 const NET_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const NET_ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+const NET_CHUNK = 5000; // символов в куске: даже кириллица с экранированием влезает в 16 КБ
 const NET_LOCAL = new URLSearchParams(location.search).get('net') === 'local';
 
 const Net = {
-  role: null, code: '', peer: null, conns: {}, conn: null, h: {}, libP: null, seen: {},
+  role: null, code: '', peer: null, conns: {}, conn: null, h: {}, libP: null, seen: {}, chunkId: 0,
 
   // h: { msg(slot, m), join(slot), leave(slot), lost(reason) }
   on(h) { this.h = h; },
@@ -51,9 +52,10 @@ const Net = {
       if (!slot) { c.send({ k: 'full' }); setTimeout(() => c.close(), 300); return; }
       this.conns[slot] = c;
       this.seen[slot] = performance.now();
-      c.on('data', m => { this.seen[slot] = performance.now(); if (this.h.msg) this.h.msg(slot, m); });
+      c.on('data', m => { this.seen[slot] = performance.now(); m = this.unchunk(c, m); if (m && this.h.msg) this.h.msg(slot, m); });
       const gone = () => { if (this.conns[slot] !== c) return; delete this.conns[slot]; if (this.h.leave) this.h.leave(slot); };
-      c.on('close', gone); c.on('error', gone);
+      // ошибка ещё не значит, что связь пропала (например, слишком большое сообщение) — ждём настоящего закрытия
+      c.on('close', gone); c.on('error', () => { if (c.open === false) gone(); });
       if (this.h.join) this.h.join(slot);
     };
     if (NET_LOCAL) return this.localHost(code, accept);
@@ -81,17 +83,40 @@ const Net = {
       peer.on('open', () => {
         const c = this.conn = peer.connect('wl-' + code, { serialization: 'json', reliable: true });
         c.on('open', () => { done = true; clearTimeout(timer); ok(); });
-        c.on('data', m => { this.seen.host = performance.now(); if (this.h.msg) this.h.msg(0, m); });
+        c.on('data', m => { this.seen.host = performance.now(); m = this.unchunk(c, m); if (m && this.h.msg) this.h.msg(0, m); });
         const gone = () => { if (this.conn !== c) return; this.conn = null; if (done && this.h.lost) this.h.lost('Связь с хозяином лобби потеряна'); };
-        c.on('close', gone); c.on('error', gone);
+        c.on('close', gone); c.on('error', () => { if (c.open === false) gone(); });
       });
     });
   },
 
   // ---------- отправка ----------
-  send(slot, m) { const c = this.conns[slot]; if (c && c.open !== false) try { c.send(m); } catch (e) { /* соединение закрывается */ } },
+  // PeerJS молча выбрасывает сообщения больше ~16 КБ — большие снимки режем на куски и склеиваем на той стороне
+  put(c, m) {
+    if (!c || c.open === false) return 0;
+    try {
+      const str = JSON.stringify(m);
+      if (str.length <= NET_CHUNK) c.send(m);
+      else {
+        const id = ++this.chunkId, n = Math.ceil(str.length / NET_CHUNK);
+        for (let i = 0; i < n; i++) c.send({ k: '_c', id, i, n, d: str.slice(i * NET_CHUNK, (i + 1) * NET_CHUNK) });
+      }
+      return str.length;
+    } catch (e) { return 0; /* соединение закрывается */ }
+  },
+  unchunk(c, m) {
+    if (!m || m.k !== '_c') return m;
+    const b = c._wlParts || (c._wlParts = {});
+    if (m.i === 0) { b.id = m.id; b.parts = []; }
+    if (b.id !== m.id || b.parts.length !== m.i) return null; // кусок потерялся — ждём следующего снимка
+    b.parts.push(m.d);
+    if (b.parts.length < m.n) return null;
+    const str = b.parts.join(''); b.parts = []; b.id = -1;
+    try { return JSON.parse(str); } catch (e) { return null; }
+  },
+  send(slot, m) { return this.put(this.conns[slot], m); },
   bcast(m) { for (const s in this.conns) this.send(+s, m); },
-  toHost(m) { if (this.conn) try { this.conn.send(m); } catch (e) { } },
+  toHost(m) { return this.put(this.conn, m); },
   // сколько данных ещё ждёт отправки (если сеть не успевает — пропускаем снимок)
   buffered(slot) { const c = this.conns[slot], dc = c && c.dataChannel; return dc ? dc.bufferedAmount : 0; },
   kick(slot) { const c = this.conns[slot]; if (c) { delete this.conns[slot]; try { c.close(); } catch (e) { } } },
@@ -137,7 +162,8 @@ const Net = {
         if (d.bye) { this.conn = null; if (this.h.lost) this.h.lost('Связь с хозяином лобби потеряна'); return; }
         if (d.m && d.m.k === '_ok') { clearTimeout(timer); ok(); return; }
         this.seen.host = performance.now();
-        if (this.h.msg) this.h.msg(0, d.m);
+        const m = this.unchunk(c, d.m);
+        if (m && this.h.msg) this.h.msg(0, m);
       };
       this.bc.postMessage({ from: id, to: 'host', hello: true });
     });

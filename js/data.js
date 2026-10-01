@@ -281,7 +281,7 @@ const HERO_TINT = { daler: '#257179', stimme: '#a83266', babaduk: '#3b5dc9', mag
 const Save = {
   data: { coins: 0, meta: {}, cleared: {}, clearedN: {}, best: {}, ach: {}, wins: {}, costume: {}, talents: {}, daily: {},
     tutDone: false, introSeen: false, endingSeen: false, nightmare: false,
-    settings: { music: true, sfx: true, musicVol: 1, sfxVol: 1, shake: 1, btn: 1 } },
+    settings: { music: true, sfx: true, musicVol: 1, sfxVol: 1, shake: 1, btn: 1, net: 1 } },
   load() {
     try {
       const d = JSON.parse(localStorage.getItem('wl_save'));
