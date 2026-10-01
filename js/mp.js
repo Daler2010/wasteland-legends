@@ -49,7 +49,7 @@ const MP = {
   },
   // всё, что нужно хозяину, чтобы построить моего героя: характеристики уже с моей прокачкой и талантами
   profile(hero) {
-    const ch = CHARACTERS.find(c => c.id === hero && Campaign.heroOpen(c.id)) || CHARACTERS[0];
+    const ch = CHARACTERS.find(c => c.id === hero) || CHARACTERS[0]; // в онлайне доступны все герои
     const T = createRun(ch.id, 'desert', {}), p = T.p, S = Campaign.s();
     const keys = ['baseSpeed', 'armorBase', 'regenBase', 'dmgBase', 'magnetBase', 'xpMul', 'critBase', 'cdTal', 'dashMul', 'ultCost', 'bossDmg', 'sprite'];
     const stats = { baseHp: p.baseHp + (S.hp || 0) };
@@ -57,8 +57,9 @@ const MP = {
     return { hero: ch.id, stats, wlvl: T.tal.wlvl || 0 };
   },
   myHero() {
-    const d = Save.data, ch = CHARACTERS.find(c => c.id === d.hero);
-    return ch && Campaign.heroOpen(ch.id) ? ch.id : 'daler';
+    // онлайн-герой хранится отдельно: он может быть ещё не спасён по сюжету
+    const d = Save.data, ch = CHARACTERS.find(c => c.id === (d.mpHero || d.hero));
+    return ch ? ch.id : 'daler';
   },
 
   // ---------- создание героя ----------
@@ -219,7 +220,7 @@ const MP = {
     const p = this.makePlayer(R, r);
     if (old) { p.x = old.x; p.y = old.y; p.tpSeq = old.tpSeq; p.net = old.net; R.pl[R.pl.indexOf(old)] = p; }
     else R.pl.push(p);
-    if (r.slot === this.me) { R.p = p; Save.data.hero = r.hero; Save.store(); }
+    if (r.slot === this.me) { R.p = p; Save.data.mpHero = r.hero; Save.store(); }
   },
   dropSlot(slot) {
     const r = this.rosterOf(slot);
@@ -1190,13 +1191,13 @@ const MP = {
 
   heroPicker() {
     const cur = (this.rosterOf(this.me) || {}).hero;
-    $('mph-list').innerHTML = CHARACTERS.filter(c => Campaign.heroOpen(c.id)).map(c =>
+    $('mph-list').innerHTML = CHARACTERS.map(c =>
       `<button class="rush-pick ${c.id === cur ? 'on' : ''}" data-h="${c.id}"><img src="${iconURL(c.sprite + (Save.data.costume[c.id] && Save.data.wins[c.id] ? '_alt' : ''), 48)}" alt=""><span>${c.name}</span><em>${WEAPONS[c.weapon].name}</em></button>`).join('');
     $('mph-list').querySelectorAll('button').forEach(b => {
       b.onclick = () => {
         UI.click();
         const prof = this.profile(b.dataset.h);
-        Save.data.hero = prof.hero; Save.store();
+        Save.data.mpHero = prof.hero; Save.store();
         if (this.isHost()) { const r = this.rosterOf(this.me); r.hero = prof.hero; r.prof = prof; this.swapHero(r); this.sendRoster(); }
         else Net.toHost({ k: 'hero', prof });
         UI.show(null);
