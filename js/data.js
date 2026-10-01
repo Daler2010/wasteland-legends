@@ -223,17 +223,17 @@ LOCATIONS.push({ id: 'gates', name: 'Врата миров', seed: 71, music: 'm
 for (const l of LOCATIONS) l.weather = { desert: 'sandstorm', forest: 'rain', factory: 'rain' }[l.id] || null;
 
 const BOSSES = {
-  scorpion: { name: 'Радскорпион', sprite: 'scorpion', hp: 4000, speed: 34, dmg: 18, r: 18, scale: 3, color: '#a7f070',
+  scorpion: { name: 'Радскорпион', sprite: 'scorpion', hp: 10000, speed: 34, dmg: 18, r: 18, scale: 3, color: '#a7f070',
     attacks: [{ type: 'spread', cd: 2.2, n: 5 }, { type: 'dash', cd: 5.5 }] },
-  robot: { name: 'Боевой робот «Молот»', sprite: 'robot', hp: 4600, speed: 24, dmg: 20, r: 18, scale: 3, color: '#ef7d57',
+  robot: { name: 'Боевой робот «Молот»', sprite: 'robot', hp: 11500, speed: 24, dmg: 20, r: 18, scale: 3, color: '#ef7d57',
     attacks: [{ type: 'ring', cd: 3, n: 16 }, { type: 'spread', cd: 1.8, n: 3 }] },
-  giant: { name: 'Зомби-великан', sprite: 'giant', hp: 5200, speed: 26, dmg: 24, r: 20, scale: 3, color: '#7a6a9a',
+  giant: { name: 'Зомби-великан', sprite: 'giant', hp: 13000, speed: 26, dmg: 24, r: 20, scale: 3, color: '#7a6a9a',
     attacks: [{ type: 'summon', cd: 6, n: 6 }, { type: 'ring', cd: 4, n: 12 }, { type: 'dash', cd: 7 }] },
   // Финальный босс: толстый школьник-переросток с усиками и галстуком
-  alan: { name: 'ALANIATOR3000', sprite: 'alan', hp: 8500, speed: 27, dmg: 24, r: 22, scale: 3, color: '#ef3b5b',
+  alan: { name: 'ALANIATOR3000', sprite: 'alan', hp: 21000, speed: 27, dmg: 24, r: 22, scale: 3, color: '#ef3b5b',
     attacks: [{ type: 'rain', cd: 4.5, n: 7 }, { type: 'spread', cd: 2.2, n: 7 }, { type: 'dash', cd: 6 },
       { type: 'ring', cd: 3.6, n: 18 }, { type: 'summon', cd: 8, n: 5, spawn: 'rat' }] },
-  queen: { name: 'Матка слизней', sprite: 'queen', hp: 5000, speed: 28, dmg: 20, r: 19, scale: 3, color: '#c77dff',
+  queen: { name: 'Матка слизней', sprite: 'queen', hp: 12500, speed: 28, dmg: 20, r: 19, scale: 3, color: '#c77dff',
     attacks: [{ type: 'summon', cd: 5, n: 7, spawn: 'minislime' }, { type: 'ring', cd: 3.2, n: 14 }, { type: 'spread', cd: 2.6, n: 5 }] },
 };
 

@@ -1,7 +1,7 @@
 // ===== Лобби-карта, территория «Япония» и герои, которых можно завербовать =====
 
 // ---------------------------------------------------------------- НОВЫЕ ГЕРОИ
-// Все они — обычные игровые герои, доступные сразу
+// Все они — обычные игровые герои; в отряд приходят по сюжету (campaign.js)
 CHARACTERS.push(
   { id: 'akemi', name: 'ISOSHA', title: 'Куноити', sprite: 'akemi', hp: 85, speed: 80, armor: 0, regen: 0, weapon: 'shuriken',
     desc: 'Самая быстрая из героев. Мечет сюрикены веером. Ульта: танец теней.' },
@@ -11,7 +11,7 @@ CHARACTERS.push(
     desc: 'Король в изгнании. Его скипетр выпускает самонаводящиеся сферы. Ульта: королевский указ.' },
   { id: 'bilol', name: 'BILOL', title: 'Ниндзя', sprite: 'bilol', hp: 100, speed: 82, armor: 0, regen: 0, weapon: 'shadow',
     desc: 'Тень среди теней. Мгновенно настигает ближайших врагов. Ульта: дымовая завеса.' });
-const heroOpen = () => true;
+const heroOpen = c => !!c && Campaign.heroOpen(c.id);
 Save.data.recruit = {};
 Save.data.hero = 'daler';
 
@@ -406,7 +406,7 @@ ACHIEVEMENTS.push(
   { id: 'clear_japan', name: 'Покоритель', desc: 'Победить босса: Остров сакуры', coins: 40, test: R => R.everWon && R.loc.id === 'japan' });
 
 // Босс острова — демон Они
-BOSSES.oni = { name: 'Демон Они', sprite: 'oni', hp: 5600, speed: 30, dmg: 22, r: 19, scale: 3, color: '#ef3b5b',
+BOSSES.oni = { name: 'Демон Они', sprite: 'oni', hp: 14000, speed: 30, dmg: 22, r: 19, scale: 3, color: '#ef3b5b',
   attacks: [{ type: 'dash', cd: 3.4 }, { type: 'spread', cd: 2.2, n: 5 }, { type: 'rain', cd: 5.5, n: 6 }, { type: 'ring', cd: 4.5, n: 14 }] };
 
 function bossList(R) { return [R.loc.boss]; }
@@ -702,7 +702,6 @@ Story.bossTalk = function (R, def) {
 // первая победа над Они — сюжетная сцена
 const _finishRun = finishRun;
 finishRun = function (R) {
-  if (!R.rush && R.loc.id === 'japan' && R.won && !Save.data.cleared.japan) R.extraScenes = [JAPAN_SCENES.japan1];
   // запоминаем последний забег — о нём заговорят герои у костра
   if (!R.rush) Save.data.last = { hero: R.ch.id, loc: R.loc.name, won: R.everWon, t: Math.min(R.t, RUN_TIME), kills: R.kills };
   _finishRun(R);
@@ -877,6 +876,7 @@ const Hub = {
       { id: 'ach', x: 170, y: 110, r: 22, spr: 'h_statue', tint: '#ffcd75', name: 'Зал славы', desc: 'Достижения и рекорды.', act: open(() => UI.showAch()) },
       { id: 'train', x: -250, y: 150, r: 22, spr: 'h_dummy', tint: '#a7f070', name: 'Тренировочная площадка', desc: 'Манекены и арсенал: попробуй любое оружие, эволюции и предметы без забега.', act: () => Training.start() },
       { id: 'story', x: 250, y: 150, r: 22, spr: 'h_book', tint: '#e86a92', name: 'Летопись', desc: 'Пересмотреть открытые главы сюжета.', act: open(() => Story.gallery()) },
+      { id: 'path', x: 58, y: 56, r: 16, spr: 'h_sign', tint: '#ffcd75', name: 'Карта пути', desc: 'Весь путь к ALANIATOR3000: что пройдено и кто ещё в плену.', act: open(() => Campaign.showPath()) },
       { id: 'exit', x: 0, y: 215, r: 20, spr: 'h_sign', tint: '#94b0c2', name: 'В главное меню', desc: 'Настройки и управление — там.', act: () => this.leave() },
     ];
     this.build();
@@ -939,13 +939,13 @@ const Hub = {
     // твёрдые объекты: круг у основания (цветы, грибы и черепа остаются проходимыми)
     const RAD = { h_tree: 4, sakura: 4, deadtree: 5, h_bush: 5, rock: 5, lantern: 3, tomb: 5, crate: 6, drum: 5, cactus: 4, machine: 6,
       wagon: 11, stump: 5, h_dummy: 4, rbarrel: 5, scrap: 5, bamboo: 3 };
-    const ZR = { hero: 7, rush: 14, japan: 0, exit: 4 };
+    const ZR = { hero: 7, rush: 14, japan: 0, exit: 4, path: 4 };
     this.solids = [];
     for (const d of props) if (RAD[d.name]) this.solids.push({ x: d.x, y: d.y - 2, r: RAD[d.name] * d.s * (d.name === 'deadtree' ? 0.5 : 1) });
     for (const z of this.zones) {
-      if (z.id === 'japan') { this.solids.push({ x: z.x - 12, y: z.y - 2, r: 3 }, { x: z.x + 12, y: z.y - 2, r: 3 }); continue; } // столбы тории, между ними можно пройти
-      if (z.kind === 'portal') { this.solids.push({ x: z.x - 9, y: z.y - 2, r: 4 }, { x: z.x + 9, y: z.y - 2, r: 4 }); continue; } // колонны арки
-      this.solids.push({ x: z.x, y: z.y - 3, r: ZR[z.id] !== undefined ? ZR[z.id] : 11 });
+      if (z.id === 'japan') { this.solids.push({ x: z.x - 12, y: z.y - 2, r: 3, zid: z.id }, { x: z.x + 12, y: z.y - 2, r: 3, zid: z.id }); continue; } // столбы тории, между ними можно пройти
+      if (z.kind === 'portal') { this.solids.push({ x: z.x - 9, y: z.y - 2, r: 4, zid: z.id }, { x: z.x + 9, y: z.y - 2, r: 4, zid: z.id }); continue; } // колонны арки
+      this.solids.push({ x: z.x, y: z.y - 3, r: ZR[z.id] !== undefined ? ZR[z.id] : 11, zid: z.id });
     }
   },
 
@@ -1107,14 +1107,9 @@ const Hub = {
     if (z.kind !== 'portal') { UI.click(); z.act(); return; }
     if (this.locked(z)) { Sound.sfx('hurt'); return; }
     UI.click();
-    const d = Save.data, opts = { nightmare: !!d.nightmare && Object.keys(d.wins).length > 0 };
-    const go = () => Game.start(d.hero, z.id, opts);
-    // первый вход на Остров сакуры — сюжетная сцена
-    if (z.id === 'japan' && !Story.chap().japan0) {
-      Story.chap().japan0 = true; Save.store();
-      Game.state = 'menu';
-      Story.scene(JAPAN_SCENES.japan0, go, d.hero);
-    } else go();
+    const d = Save.data, opts = { nightmare: !!d.nightmare && Campaign.done() };
+    // первый вход на карту — сюжетная сцена
+    Campaign.enterMap(z.id, () => Game.start(d.hero, z.id, opts));
   },
 
   // Показывать подписи и панель только пока мы на карте
@@ -1187,7 +1182,7 @@ const Hub = {
     $('hub-desc').textContent = lock ? lock : desc;
     $('hub-go').textContent = go + (matchMedia('(hover: hover)').matches && !lock ? '  [E]' : '');
     $('hub-go').disabled = !!lock;
-    const diff = $('hub-diff'), showDiff = z.kind === 'portal' && !lock && Object.keys(d.wins).length > 0;
+    const diff = $('hub-diff'), showDiff = z.kind === 'portal' && !lock && Campaign.done();
     diff.classList.toggle('hidden', !showDiff);
     diff.textContent = d.nightmare ? 'Сложность: КОШМАР' : 'Сложность: обычная';
     diff.classList.toggle('on', !!d.nightmare);
@@ -1306,7 +1301,7 @@ const HubUI = {
         card.querySelector('img.portrait').style.filter = 'brightness(0.15)';
         card.querySelector('.card-name').textContent = '???';
         const lock = card.querySelector('.costume-lock');
-        if (lock) lock.textContent = 'Победи этого бойца на Острове сакуры';
+        if (lock) lock.textContent = 'В плену. Спаси этого героя по сюжету';
       }
     };
     const showLoc = UI.showLoc.bind(UI);

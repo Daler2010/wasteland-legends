@@ -624,6 +624,10 @@ const Pad = {
       if (edge(0)) Input.dashQ = true;
       if (edge(1) || edge(2)) Input.ultQ = true;
       if (edge(9)) Game.pause();
+    } else if (Game.state === 'hub') {
+      // лагерь: A — войти или заговорить, Y — большая карта
+      if (edge(0)) Hub.use();
+      if (edge(3)) Hub.bigMap = !Hub.bigMap;
     } else if (Game.state === 'dialog') {
       if (edge(0)) Story.next();
     } else {
@@ -643,7 +647,7 @@ const Pad = {
       }
       this.dirPrev = dir;
       if (edge(0) && document.activeElement && document.activeElement.click) document.activeElement.click();
-      if (edge(1) && Game.state === 'menu') { const back = document.querySelector('.screen.active [data-back]'); if (back) back.click(); }
+      if (edge(1) && Game.state === 'menu') { const back = document.querySelector('.screen.active [data-back]') || document.querySelector('.screen.active #story-next'); if (back && back.style.display !== 'none') back.click(); }
     }
     this.prev = b;
   },
@@ -750,15 +754,6 @@ const Extra = {
     $('shards').style.cursor = 'pointer';
     $('shards').onclick = () => { UI.click(); Story.gallery(); };
 
-    // Ветка Maga: перед его первым забегом — глава «Страж лабиринта»
-    const start = Game.start.bind(Game);
-    Game.start = (c, l, o) => {
-      if (c === 'maga' && !Story.chap().maga1 && !(o && (o.daily || o.rush))) {
-        Story.chap().maga1 = true; Save.store();
-        Story.scene(Story.chapter('maga1'), () => start(c, l, o));
-      } else start(c, l, o);
-    };
-
     // Сложность «Кошмар» на экране выбора локации
     const showLoc = UI.showLoc.bind(UI);
     UI.showLoc = () => {
@@ -808,7 +803,6 @@ const Extra = {
         $('btn-endless').classList.add('hidden');
         $('end-title').textContent = R.won ? (R.rush.length > 1 ? 'БОССЫ ПОВЕРЖЕНЫ!' : 'БОСС ПОВЕРЖЕН!') : 'ТЫ ПОГИБ';
       }
-      if (!R.rush && R.ch.id === 'maga' && R.everWon && !Story.chap().maga2) { Story.chap().maga2 = true; Save.store(); q.push(Story.chapter('maga2')); }
       if (R.storyEnding) { R.storyEnding = false; q.push(Story.ENDING_SCENE); }
       if (R.extraScenes) { q.push(...R.extraScenes); R.extraScenes = null; } // вербовка новых героев
       const next = () => { const s = q.shift(); if (s) Story.scene(s, next, R.ch.id); else UI.show('end'); };

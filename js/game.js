@@ -321,6 +321,7 @@ function createRun(charId, locId, opts) {
   };
   return {
     ch, loc, p, t: 0, cx: 0, cy: 0,
+    st: null, // сюжетный забег: этапы и волны (campaign.js)
     rush: opts.rush || null, // комната боссов: список выбранных боссов
     training: !!opts.training, // тренировочная площадка: манекены вместо врагов
     tal: T, mods, diff, nightmare: !!opts.nightmare, daily: opts.daily || null, talentPts: 0, talentGiven: false, weatherW: 0,
@@ -456,11 +457,15 @@ function hurtPlayer(R, dmg) {
 // ---------- Появление врагов ----------
 function spawnDist() { return Math.hypot(Game.W, Game.H) / 2 + 12; }
 
+// «Время сложности»: в сюжетном забеге его задаёт текущая волна, в остальных режимах — таймер
+function diffTime(R) { return R.st ? R.st.vt : R.t; }
+
 function makeEnemy(R, type, x, y) {
-  const def = ENEMIES[type], mul = 1 + R.t / 60 * 0.35, D = R.diff;
+  // здоровье растёт с ускорением: начало мягкое, а к боссу враги догоняют прокачанную сборку
+  const def = ENEMIES[type], T = diffTime(R), m = T / 60, mul = 1 + m * 0.3 + m * m * 0.05, D = R.diff;
   const hp = def.hp * mul * D.hp;
   return { type, def, x, y, hp, maxHp: hp, speed: def.speed * rand(0.9, 1.1) * D.spd, r: def.r, slowT: 0,
-    dmg: def.dmg * (1 + R.t / 600 * 0.5) * D.dmg, kvx: 0, kvy: 0, flash: 0, face: 1,
+    dmg: def.dmg * (1 + T / 600 * 0.5) * D.dmg, kvx: 0, kvy: 0, flash: 0, face: 1,
     sc: def.size ? def.size / 16 : 1, spawnT: 0.3, squash: 0,
     flank: Math.random() < 0.6 ? rand(-1, 1) : 0, lunge: def.lunge || null, lungeCd: rand(0, 1.5), lst: 0, lt: 0,
     shots: 2, strafeT: rand(0.5, 2), mv: true, hop: 0, fuse: 0, castT: rand(2, 5),
@@ -484,12 +489,20 @@ function spawnAround(R, type, angle) {
 }
 
 function pickEnemyType(R) {
-  const f = R.t / RUN_TIME, lw = R.loc.weights;
+  const T = diffTime(R), f = T / RUN_TIME, lw = R.loc.weights;
   const w = { zombie: lw.zombie, rat: lw.rat };
   if (f > 0.07) w.slime = lw.slime;
   if (f > 0.17) w.marauder = lw.marauder;
   // новые типы врагов подключаются по ходу забега (from — доля времени до босса)
   for (const id of ['bomber', 'drone', 'brute', 'necro']) if (lw[id] && f > ENEMIES[id].from) w[id] = lw[id];
+  // стрелков одновременно немного: иначе их пули сливаются в стену, от которой не увернуться
+  let shooters = 0, necros = 0;
+  for (const e of R.enemies) {
+    if (e.dead) continue;
+    if (e.type === 'marauder' || e.type === 'drone') shooters++; else if (e.type === 'necro') necros++;
+  }
+  if (shooters >= (4 + T / 75) * R.diff.rate) { delete w.marauder; delete w.drone; }
+  if (necros >= 2 + T / 240) delete w.necro; // некромантов мало: иначе поднятые ими зомби не кончаются
   return weightedPick(w);
 }
 
@@ -497,7 +510,9 @@ function updateSpawns(R, dt) {
   if (R.rush) {
     // комната боссов: все выбранные боссы выходят сразу
     if (!R.bossSpawned && R.t >= 1.5) {
-      R.rush.forEach(id => spawnBoss(R, id));
+      // сборка здесь готовая и не растёт — здоровье боссов подогнано под выбранную силу
+      const mul = { 1: 0.15, 2: 0.4, 3: 0.8 }[Game.lastOpts.power || 2];
+      R.rush.forEach(id => spawnBoss(R, id, mul));
       UI.banner(R.rush.length > 1 ? 'БОССЫ: ' + R.rush.length : 'БОСС: ' + BOSSES[R.rush[0]].name, 3);
     }
     // полоска здоровья показывает ближайшего живого босса
@@ -599,7 +614,7 @@ function openChest(R) {
 
 function spawnBoss(R, id, mul) {
   R.bossSpawned = true;
-  mul = mul || 1;
+  mul = (mul || 1) * (1 + Math.max(0, R.p.level - 30) * 0.03); // против разогнанной сборки босс крепче
   R.lastBossId = id || R.loc.boss;
   (R.fought || (R.fought = [])).push(R.lastBossId);
   const def = BOSSES[id || R.loc.boss], a = Math.random() * Math.PI * 2, d = spawnDist();
@@ -646,7 +661,7 @@ function updateEnemies(R, dt) {
     const tl = Math.hypot(mx, my) || 1;
     mx /= tl; my /= tl;
     let spd = e.speed, locked = false;
-    const ai = e.def.ai;
+    const ai = e.hunt ? 'shamble' : e.def.ai; // последние враги волны сами идут к герою
 
     // Бросок: замах (мигает и приседает) → быстрый прыжок в точку упреждения
     if (e.lunge) {
@@ -718,6 +733,7 @@ function updateEnemies(R, dt) {
       e.castT -= dt;
       if (e.castT <= 0 && d < 220 && R.enemies.length < 280) {
         e.castT = 6; e.squash = 0.15; e.atkT = 0.6;
+        if ((e.casts = (e.casts || 0) + 1) >= 3) e.hunt = true; // силы кончились — идёт врукопашную
         for (let i = 0; i < 3; i++) {
           const z = makeEnemy(R, 'zombie', e.x + rand(-18, 18), e.y + rand(-18, 18));
           R.enemies.push(z);
@@ -1287,7 +1303,7 @@ function drawNum(ctx, str, x, y, c, k) {
 
 function drawGround(ctx, loc, cx, cy, W, H) {
   // Два типа грунта: крупные «пятна» второго задаёт плавный шум, края размыты случайностью
-  const T = TILES[loc.id];
+  const T = TILES[loc.tiles || loc.id]; // у этапов сюжетной карты свой грунт
   const x0 = Math.floor(cx / 16), y0 = Math.floor(cy / 16);
   const nx = Math.ceil(W / 16) + 1, ny = Math.ceil(H / 16) + 1;
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
@@ -1457,7 +1473,7 @@ function drawAmbient(ctx, loc, cx, cy, W, H) {
 }
 
 function chunkDecor(loc, i, j) {
-  const key = loc.id + ':' + i + ',' + j;
+  const key = (loc.tiles || loc.id) + ':' + i + ',' + j;
   let arr = Game.decor.get(key);
   if (arr) return arr;
   if (Game.decor.size > 800) Game.decor.clear();

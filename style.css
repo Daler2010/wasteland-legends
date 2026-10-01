@@ -163,7 +163,10 @@ h2 { font-size: clamp(14px, 3vw, 22px); text-shadow: 3px 3px 0 #000; text-align:
 #hpbar { width: min(160px, 38vw); height: 18px; border: 3px solid var(--line); background: #5d275d; position: relative; }
 #hpfill { height: 100%; background: var(--red); }
 #hptext { position: absolute; inset: 0; font-size: 8px; display: flex; align-items: center; justify-content: center; text-shadow: 1px 1px 0 #000; }
-#timer { font-size: clamp(14px, 3vw, 22px); text-shadow: 3px 3px 0 #000; padding-top: 2px; }
+#timer { font-size: clamp(14px, 3vw, 22px); text-shadow: 3px 3px 0 #000; padding-top: 2px; white-space: nowrap; }
+#hud-mid { text-align: center; }
+#objective { margin-top: 8px; font-size: clamp(8px, 1.6vw, 10px); line-height: 1.6; color: var(--gold); text-shadow: 2px 2px 0 #000; max-width: 46vw; }
+#objective:empty { display: none; }
 .hudtext { font-size: 10px; text-shadow: 2px 2px 0 #000; display: flex; align-items: center; gap: 6px; }
 #slots { line-height: 0; }
 #slots img { width: 22px; height: 22px; margin: 0 3px 3px 0; background: rgba(0, 0, 0, 0.45); border: 2px solid #566c86; }
@@ -357,6 +360,24 @@ h2 { letter-spacing: 1px; }
   text-shadow: 1px 1px 0 #000;
 }
 .hub-label.on { color: var(--gold); border-color: var(--gold); font-size: 9px; z-index: 2; }
+.path-row { width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin: 6px 0; text-align: left; border: 3px solid var(--line); background: rgba(20, 22, 42, 0.6); }
+.path-row.now { border-color: var(--gold); background: rgba(90, 70, 20, 0.45); }
+.path-row.lock { opacity: 0.55; }
+.path-row.done .path-mark { color: #a7f070; }
+.path-mark { width: 22px; text-align: center; font-size: 12px; color: var(--gold); }
+.path-info { flex: 1; min-width: 0; }
+.path-info .muted { font-size: 8px; line-height: 1.6; margin-top: 4px; }
+.path-who img { width: 36px; height: 36px; image-rendering: pixelated; margin-left: 4px; }
+.path-who img.caged { filter: brightness(0.3); }
+.btn.gift { display: flex; align-items: center; gap: 12px; width: 100%; margin: 8px 0; text-align: left; line-height: 1.7; }
+.btn.gift img { width: 32px; height: 32px; image-rendering: pixelated; }
+.btn.gift small { font-size: 8px; opacity: 0.85; }
+#hub-quest {
+  pointer-events: auto; cursor: pointer;
+  position: absolute; top: 34px; left: 50%; transform: translateX(-50%); width: max-content; max-width: min(560px, 62vw);
+  padding: 8px 12px; text-align: center; font-size: 9px; line-height: 1.7; color: var(--gold);
+  background: rgba(20, 22, 42, 0.85); border: 3px solid var(--gold); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+}
 #hub-hint { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-size: 10px; color: var(--muted); text-shadow: 2px 2px 0 #000; }
 #hub-prompt {
   pointer-events: auto; position: absolute; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%);
@@ -466,6 +487,7 @@ h2 { letter-spacing: 1px; }
   .lvl-card .card-tag { font-size: 8px; }
   /* лобби: подсказка не лезет под мини-карту, панель входа компактнее */
   #hub-hint { display: none; }
+  #hub-quest { top: 8px; left: 8px; transform: none; font-size: 8px; padding: 6px 8px; text-align: left; }
   #hub-prompt { padding: 10px 12px; gap: 7px; bottom: max(12px, env(safe-area-inset-bottom)); }
   #hub-prompt .muted { font-size: 8px; line-height: 1.6; }
   #hub-go { min-width: 0; width: 100%; padding: 12px; }

@@ -7,6 +7,7 @@
   UI.init();
   Extra.init();
   HubUI.init();
+  Campaign.init();
 
   let last = performance.now();
   function frame(now) {
